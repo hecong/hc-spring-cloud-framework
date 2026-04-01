@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b041160d-b19c-4afb-8a0c-de5ef62263b2" name="更改" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="alwaysUpdateSnapshots" value="true" />
+        <option name="customMavenHome" value="D:\program\maven\apache-maven-3.9.11" />
+        <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
+        <option name="userSettingsFile" value="D:\program\maven\apache-maven-3.9.11\conf\settings.xml" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="3BekblWN6pGkQYmPYLTKbL8Izts" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "JUnit.ExcelExportServiceImplTest.executor": "Run",
+    "JUnit.ExcelExportServiceImplTest.testExportData_SyncWithSupplier.executor": "Debug",
+    "JUnit.ExcelExportServiceImplTest.testExportWithPivotTable_AsyncExport.executor": "Run",
+    "JUnit.ExcelExportServiceImplTest.testExportWithPivotTable_EmptyDynamicColumns.executor": "Run",
+    "JUnit.MultiSheetImportServiceImplTest.executor": "Run",
+    "JUnit.MultiSheetImportServiceImplTest.testMultiSheetImport_BatchHandler.executor": "Run",
+    "Maven.hc-excel-spring-boot-starter [clean].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager" selected="JUnit.MultiSheetImportServiceImplTest">
+    <configuration name="ExcelExportServiceImplTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="hc-excel-spring-boot-starter" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.hnhegui.framework.excel.service.impl.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.hnhegui.framework.excel.service.impl" />
+      <option name="MAIN_CLASS_NAME" value="com.hnhegui.framework.excel.service.impl.ExcelExportServiceImplTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExcelExportServiceImplTest.testExportWithPivotTable_AsyncExport" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="hc-excel-spring-boot-starter" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.hnhegui.framework.excel.service.impl.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.hnhegui.framework.excel.service.impl" />
+      <option name="MAIN_CLASS_NAME" value="com.hnhegui.framework.excel.service.impl.ExcelExportServiceImplTest" />
+      <option name="METHOD_NAME" value="testExportWithPivotTable_AsyncExport" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExcelExportServiceImplTest.testExportWithPivotTable_EmptyDynamicColumns" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="hc-excel-spring-boot-starter" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.hnhegui.framework.excel.service.impl.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.hnhegui.framework.excel.service.impl" />
+      <option name="MAIN_CLASS_NAME" value="com.hnhegui.framework.excel.service.impl.ExcelExportServiceImplTest" />
+      <option name="METHOD_NAME" value="testExportWithPivotTable_EmptyDynamicColumns" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="MultiSheetImportServiceImplTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="hc-excel-spring-boot-starter" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.hnhegui.framework.excel.service.impl.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.hnhegui.framework.excel.service.impl" />
+      <option name="MAIN_CLASS_NAME" value="com.hnhegui.framework.excel.service.impl.MultiSheetImportServiceImplTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="MultiSheetImportServiceImplTest.testMultiSheetImport_BatchHandler" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="hc-excel-spring-boot-starter" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.hnhegui.framework.excel.service.impl.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.hnhegui.framework.excel.service.impl" />
+      <option name="MAIN_CLASS_NAME" value="com.hnhegui.framework.excel.service.impl.MultiSheetImportServiceImplTest" />
+      <option name="METHOD_NAME" value="testMultiSheetImport_BatchHandler" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="hc-spring-cloud-framework" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="hc-spring-cloud-framework" />
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.MultiSheetImportServiceImplTest" />
+        <item itemvalue="JUnit.MultiSheetImportServiceImplTest.testMultiSheetImport_BatchHandler" />
+        <item itemvalue="JUnit.ExcelExportServiceImplTest" />
+        <item itemvalue="JUnit.ExcelExportServiceImplTest.testExportWithPivotTable_AsyncExport" />
+        <item itemvalue="JUnit.ExcelExportServiceImplTest.testExportWithPivotTable_EmptyDynamicColumns" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.26927.53" />
+        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-IU-251.26927.53" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="b041160d-b19c-4afb-8a0c-de5ef62263b2" name="更改" comment="" />
+      <created>1774856998611</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1774856998611</updated>
+      <workItem from="1774856999585" duration="6683000" />
+      <workItem from="1774943725717" duration="14000" />
+      <workItem from="1774943750756" duration="15126000" />
+      <workItem from="1775004901775" duration="5007000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/hc-excel-spring-boot-starter/src/main/java/com/hnhegui/framework/excel/model/multisheet/MultiSheetImportBuilder.java</url>
+          <line>183</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
