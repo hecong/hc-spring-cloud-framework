@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>hc-excel-spring-boot-starter</module>
+        <module>hc-redis-spring-boot-starter</module>
     </modules>
 
     <properties>
@@ -27,6 +28,7 @@
 
         <fastjson2.version>2.0.43</fastjson2.version>
         <transmittable-thread-local.version>2.14.5</transmittable-thread-local.version>
+        <redisson.version>3.27.0</redisson.version>
     </properties>
 
     <dependencyManagement>
@@ -68,6 +70,12 @@
                 <groupId>com.alibaba</groupId>
                 <artifactId>transmittable-thread-local</artifactId>
                 <version>${transmittable-thread-local.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
