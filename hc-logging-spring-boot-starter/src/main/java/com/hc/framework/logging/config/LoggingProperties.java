@@ -24,16 +24,6 @@ public class LoggingProperties {
     private Boolean apiLogEnabled = true;
 
     /**
-     * 是否启用接口限流
-     */
-    private Boolean rateLimitEnabled = true;
-
-    /**
-     * 限流配置
-     */
-    private RateLimitConfig rateLimit = new RateLimitConfig();
-
-    /**
      * 日志忽略路径
      */
     private List<String> ignorePaths = new ArrayList<>();
@@ -41,8 +31,18 @@ public class LoggingProperties {
     /**
      * 限流配置
      */
+    private RateLimitConfig rateLimit = new RateLimitConfig();
+
+    /**
+     * 限流嵌套配置
+     */
     @Data
     public static class RateLimitConfig {
+        /**
+         * 是否启用接口限流
+         */
+        private Boolean enabled = true;
+
         /**
          * 默认QPS限制
          */
@@ -54,13 +54,13 @@ public class LoggingProperties {
         private Integer warmUpPeriod = 10;
 
         /**
-         * 是否排队等待
-         */
-        private Boolean waitEnabled = false;
-
-        /**
          * 最大等待时间（毫秒）
          */
         private Integer maxWaitTime = 500;
+
+        /**
+         * 是否排队等待
+         */
+        private Boolean waitEnabled = false;
     }
 }

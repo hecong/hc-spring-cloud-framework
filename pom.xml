@@ -24,10 +24,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Spring Boot -->
         <spring-boot.version>3.3.0</spring-boot.version>
+        <!-- Spring Cloud -->
+        <spring-cloud.version>2023.0.2</spring-cloud.version>
         <!-- EasyExcel -->
         <easyexcel.version>4.0.1</easyexcel.version>
         <!-- Hutool -->
-        <hutool.version>5.8.40</hutool.version>
+        <hutool.version>6.0.0-M10</hutool.version>
         <!-- Lombok -->
         <lombok.version>1.18.30</lombok.version>
 
@@ -56,6 +58,14 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- Spring Cloud BOM -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!-- EasyExcel -->
             <dependency>
                 <groupId>com.alibaba</groupId>
@@ -64,7 +74,7 @@
             </dependency>
             <!-- Hutool -->
             <dependency>
-                <groupId>cn.hutool</groupId>
+                <groupId>org.dromara.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
             </dependency>

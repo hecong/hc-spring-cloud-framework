@@ -1,8 +1,8 @@
 package com.hc.framework.redis.config;
 
-import cn.hutool.core.util.StrUtil;
 import com.hc.framework.redis.core.CustomGenericJackson2JsonRedisSerializer;
 import com.hc.framework.redis.core.TimeoutRedisCacheManager;
+import org.dromara.hutool.core.text.StrUtil;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

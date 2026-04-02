@@ -1,6 +1,5 @@
 package com.hc.framework.redis.aspect;
 
-import cn.hutool.core.util.StrUtil;
 import com.hc.framework.redis.annotation.RepeatSubmit;
 import com.hc.framework.redis.constant.RedisKeyConstants;
 import lombok.RequiredArgsConstructor;
@@ -8,12 +7,11 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-
+import org.dromara.hutool.core.text.StrUtil;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;

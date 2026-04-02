@@ -1,6 +1,6 @@
 package com.hc.framework.web.model;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
 
@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
  * 统一响应结果
  *
  * <p>该类作为数据载体，本身不包含序列化逻辑。</p>
- * <p>动态字段名配置由 {@link com.hc.framework.web.serializer.ResultObjectWriter} 处理，
- * 在 Fastjson2 序列化时动态替换字段名。</p>
+ * <p>动态字段名配置由 {@link com.hc.framework.web.serializer.ResultSerializer} 处理，
+ * 在 Jackson 序列化时动态替换字段名。</p>
  *
  * @param <T> 数据类型
  * @author hc-framework
@@ -43,7 +43,7 @@ public class Result<T> implements Serializable {
     /**
      * 时间戳
      */
-    @JSONField(format = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime timestamp;
 
     /**

@@ -16,8 +16,8 @@ import jakarta.annotation.Resource;
 /**
  * 响应自动包装处理器：根据 wrapResponse 开关决定是否包装为 Result
  *
- * <p>统一返回 Result 包装对象，由 Fastjson2 进行序列化。</p>
- * <p>注意：String 类型不再特殊处理，统一包装为 Result 对象后由 Fastjson2 序列化，
+ * <p>统一返回 Result 包装对象，由 Jackson 进行序列化。</p>
+ * <p>注意：String 类型不再特殊处理，统一包装为 Result 对象后由 Jackson 序列化，
  * 避免手动拼接 JSON 导致的特殊字符转义问题和 data 层 JSON 二次转义问题。</p>
  *
  * @author hc-framework
@@ -42,7 +42,7 @@ public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
     /**
      * 执行包装：将原始返回值封装为 Result.success(data)
      *
-     * <p>统一返回 Result 对象，由 Fastjson2 进行 JSON 序列化。</p>
+     * <p>统一返回 Result 对象，由 Jackson 进行 JSON 序列化。</p>
      * <p>对于 String 类型，如果当前使用的是 StringHttpMessageConverter（直接返回文本），
      * 则跳过包装，避免破坏原始文本响应（如返回 HTML、纯文本等场景）。</p>
      */
@@ -57,7 +57,7 @@ public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
             return body;
         }
 
-        // 统一包装为 Result 对象，由 Fastjson2 进行序列化
+        // 统一包装为 Result 对象，由 Jackson 进行序列化
         // 不再对 String 类型特殊处理，避免手动 toString() 导致的问题：
         // 1. 特殊字符（如双引号、换行符）未转义
         // 2. data 层 JSON 被二次转义

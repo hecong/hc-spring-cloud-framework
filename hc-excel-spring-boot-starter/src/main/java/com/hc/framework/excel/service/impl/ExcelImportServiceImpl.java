@@ -1,5 +1,12 @@
 package com.hc.framework.excel.service.impl;
 
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelReader;
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.read.listener.ReadListener;
+import com.alibaba.excel.read.metadata.ReadSheet;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hc.framework.excel.executor.ExcelAsyncExecutor;
 import com.hc.framework.excel.listener.ImportDataListener;
 import com.hc.framework.excel.model.ExcelImportRequest;
@@ -13,12 +20,6 @@ import com.hc.framework.excel.model.multisheet.SheetError;
 import com.hc.framework.excel.model.multisheet.SheetImportResult;
 import com.hc.framework.excel.model.multisheet.ValidationResult;
 import com.hc.framework.excel.service.ExcelImportService;
-import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.ExcelReader;
-import com.alibaba.excel.context.AnalysisContext;
-import com.alibaba.excel.read.listener.ReadListener;
-import com.alibaba.excel.read.metadata.ReadSheet;
-import com.alibaba.fastjson2.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,9 +36,11 @@ public class ExcelImportServiceImpl implements ExcelImportService {
     private static final Logger log = LoggerFactory.getLogger(ExcelImportServiceImpl.class);
 
     private final ExcelAsyncExecutor asyncExecutor;
+    private final ObjectMapper objectMapper;
 
     public ExcelImportServiceImpl(ExcelAsyncExecutor asyncExecutor) {
         this.asyncExecutor = asyncExecutor;
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -54,10 +57,10 @@ public class ExcelImportServiceImpl implements ExcelImportService {
 
         try {
             EasyExcel.read(request.getFile().getInputStream(), clazz, listener)
-                    .sheet(request.getSheetName())
-                    .headRowNumber(headRowNumber)
-                    .registerReadListener(listener)
-                    .doRead();
+                .sheet(request.getSheetName())
+                .headRowNumber(headRowNumber)
+                .registerReadListener(listener)
+                .doRead();
         } catch (Exception e) {
             throw new RuntimeException("Excel导入失败", e);
         }
@@ -73,22 +76,22 @@ public class ExcelImportServiceImpl implements ExcelImportService {
     @Override
     public <T> void importData(InputStream inputStream, Class<T> clazz, int batchSize, Consumer<List<T>> batchHandler) {
         ImportDataListener<T> listener = new ImportDataListener<>(
-                batchSize, batchHandler, null, null, null);
+            batchSize, batchHandler, null, null, null);
         EasyExcel.read(inputStream, clazz, listener).sheet().doRead();
     }
 
     @Override
     public <T> String importDataAsync(ExcelImportRequest request, Class<T> clazz,
-                                       Consumer<List<T>> batchHandler,
-                                       Consumer<Integer> progressCallback) {
+                                      Consumer<List<T>> batchHandler,
+                                      Consumer<Integer> progressCallback) {
         return importDataAsync(request, clazz, batchHandler, null, progressCallback);
     }
 
     @Override
     public <T> String importDataAsync(ExcelImportRequest request, Class<T> clazz,
-                                       Consumer<List<T>> batchHandler,
-                                       Consumer<ExcelImportResult.ErrorRow<T>> errorHandler,
-                                       Consumer<Integer> progressCallback) {
+                                      Consumer<List<T>> batchHandler,
+                                      Consumer<ExcelImportResult.ErrorRow<T>> errorHandler,
+                                      Consumer<Integer> progressCallback) {
         String taskId = asyncExecutor.createTaskId(ExcelTaskStatus.TaskType.IMPORT);
         int batchSize = request.getBatchSize() != null ? request.getBatchSize() : 1000;
         asyncExecutor.executeImport(taskId, request, clazz, batchSize, batchHandler, errorHandler, progressCallback);
@@ -151,16 +154,16 @@ public class ExcelImportServiceImpl implements ExcelImportService {
             ReadSheet readSheet;
             if (config.getSheetIndex() >= 0) {
                 readSheet = EasyExcel.readSheet(config.getSheetIndex())
-                        .head(config.getClazz())
-                        .headRowNumber(config.getHeadRowNumber())
-                        .registerReadListener(createReadListener(config, dataList, errorList, context))
-                        .build();
+                    .head(config.getClazz())
+                    .headRowNumber(config.getHeadRowNumber())
+                    .registerReadListener(createReadListener(config, dataList, errorList, context))
+                    .build();
             } else {
                 readSheet = EasyExcel.readSheet(config.getSheetName())
-                        .head(config.getClazz())
-                        .headRowNumber(config.getHeadRowNumber())
-                        .registerReadListener(createReadListener(config, dataList, errorList, context))
-                        .build();
+                    .head(config.getClazz())
+                    .headRowNumber(config.getHeadRowNumber())
+                    .registerReadListener(createReadListener(config, dataList, errorList, context))
+                    .build();
             }
 
             excelReader.read(readSheet);
@@ -192,7 +195,7 @@ public class ExcelImportServiceImpl implements ExcelImportService {
      * @return 读取监听器
      */
     private <T> ReadListener<T> createReadListener(SheetConfig<T> config, List<T> dataList,
-                                                    List<SheetError> errorList, MultiSheetContext context) {
+                                                   List<SheetError> errorList, MultiSheetContext context) {
         return new ReadListener<T>() {
             private final List<T> batchCache = new ArrayList<>();
 
@@ -216,12 +219,12 @@ public class ExcelImportServiceImpl implements ExcelImportService {
                         }
                     } else {
                         SheetError error = SheetError.of(
-                                config.getSheetIndex(),
-                                config.getSheetName(),
-                                rowNum,
-                                validationResult.getErrorMsg()
+                            config.getSheetIndex(),
+                            config.getSheetName(),
+                            rowNum,
+                            validationResult.getErrorMsg()
                         );
-                        error.setDataJson(JSON.toJSONString(data));
+                        error.setDataJson(toJsonString(data));
                         errorList.add(error);
 
                         // 调用错误处理器
@@ -232,12 +235,12 @@ public class ExcelImportServiceImpl implements ExcelImportService {
                 } catch (Exception e) {
                     log.error("第{}行数据处理异常", rowNum, e);
                     SheetError error = SheetError.of(
-                            config.getSheetIndex(),
-                            config.getSheetName(),
-                            rowNum,
-                            "处理异常: " + e.getMessage()
+                        config.getSheetIndex(),
+                        config.getSheetName(),
+                        rowNum,
+                        "处理异常: " + e.getMessage()
                     );
-                    error.setDataJson(JSON.toJSONString(data));
+                    error.setDataJson(toJsonString(data));
                     errorList.add(error);
 
                     if (config.getErrorHandler() != null) {
@@ -279,5 +282,20 @@ public class ExcelImportServiceImpl implements ExcelImportService {
 
         // 无验证器，默认通过
         return ValidationResult.ok(data);
+    }
+
+    /**
+     * 将对象转换为 JSON 字符串
+     *
+     * @param data 数据对象
+     * @return JSON 字符串，转换失败时返回空对象字符串
+     */
+    private String toJsonString(Object data) {
+        try {
+            return objectMapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {
+            log.warn("数据序列化为JSON失败", e);
+            return "{}";
+        }
     }
 }

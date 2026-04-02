@@ -51,7 +51,7 @@
         </dependency>
         <!-- Hutool -->
         <dependency>
-            <groupId>cn.hutool</groupId>
+            <groupId>org.dromara.hutool</groupId>
             <artifactId>hutool-all</artifactId>
         </dependency>
         <!-- Lombok -->
