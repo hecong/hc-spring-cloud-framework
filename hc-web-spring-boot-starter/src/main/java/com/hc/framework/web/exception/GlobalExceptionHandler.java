@@ -139,7 +139,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleNullPointerException(NullPointerException e, HttpServletRequest request) {
         log.error("空指针异常", e);
-        Result<Void> result = Result.error("系统繁忙，请稍后重试");
+        Result<Void> result = Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "系统繁忙，请稍后重试");
         result.setPath(request.getRequestURI());
         return result;
     }
@@ -151,7 +151,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleException(Exception e, HttpServletRequest request) {
         log.error("系统异常", e);
-        Result<Void> result = Result.error("系统繁忙，请稍后重试");
+        Result<Void> result = Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "系统繁忙，请稍后重试");
         result.setPath(request.getRequestURI());
         return result;
     }

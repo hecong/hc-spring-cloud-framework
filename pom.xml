@@ -43,6 +43,7 @@
         <!-- OSS -->
         <aliyun-oss.version>3.17.4</aliyun-oss.version>
         <minio.version>8.5.10</minio.version>
+        <owasp.version>1.4.0</owasp.version>
     </properties>
 
     <dependencyManagement>
@@ -77,6 +78,12 @@
             <dependency>
                 <groupId>com.alibaba.fastjson2</groupId>
                 <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2-extension-spring6</artifactId>
                 <version>${fastjson2.version}</version>
             </dependency>
 
@@ -129,6 +136,14 @@
                 <groupId>io.minio</groupId>
                 <artifactId>minio</artifactId>
                 <version>${minio.version}</version>
+            </dependency>
+
+
+            <!-- OWASP XSS 防护（标准安全库） -->
+            <dependency>
+                <groupId>org.owasp.encoder</groupId>
+                <artifactId>encoder</artifactId>
+                <version>${owasp.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

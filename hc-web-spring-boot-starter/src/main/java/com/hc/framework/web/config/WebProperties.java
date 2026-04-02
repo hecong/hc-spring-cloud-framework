@@ -3,6 +3,9 @@ package com.hc.framework.web.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Web配置属性
  */
@@ -34,4 +37,14 @@ public class WebProperties {
      * 响应数据字段名
      */
     private String dataField = "data";
+
+    /**
+     * 是否开启XSS防护（默认开启）
+     */
+    private boolean xssEnabled = true;
+
+    /**
+     * XSS 放行路径（富文本/编辑器等）
+     */
+    private List<String> xssExcludeUrls = new ArrayList<>();
 }

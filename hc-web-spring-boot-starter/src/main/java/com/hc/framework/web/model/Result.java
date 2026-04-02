@@ -1,6 +1,5 @@
 package com.hc.framework.web.model;
 
-import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.annotation.JSONField;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
@@ -12,7 +11,13 @@ import java.time.LocalDateTime;
 /**
  * 统一响应结果
  *
+ * <p>该类作为数据载体，本身不包含序列化逻辑。</p>
+ * <p>动态字段名配置由 {@link com.hc.framework.web.serializer.ResultObjectWriter} 处理，
+ * 在 Fastjson2 序列化时动态替换字段名。</p>
+ *
  * @param <T> 数据类型
+ * @author hc-framework
+ * @since 1.0.0
  */
 @Data
 public class Result<T> implements Serializable {
@@ -58,56 +63,51 @@ public class Result<T> implements Serializable {
     }
 
     /**
-     * 成功响应
+     * 创建成功响应（无数据）
      */
     public static <T> Result<T> success() {
         return new Result<>(HttpStatus.OK.value(), "操作成功", null);
     }
 
     /**
-     * 成功响应（带数据）
+     * 创建成功响应（带数据）
      */
     public static <T> Result<T> success(T data) {
         return new Result<>(HttpStatus.OK.value(), "操作成功", data);
     }
 
     /**
-     * 成功响应（带消息和数据）
+     * 创建成功响应（自定义消息和数据）
      */
     public static <T> Result<T> success(String message, T data) {
         return new Result<>(HttpStatus.OK.value(), message, data);
     }
 
     /**
-     * 失败响应
+     * 创建失败响应（默认错误码）
      */
     public static <T> Result<T> error() {
         return new Result<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), "操作失败", null);
     }
 
     /**
-     * 失败响应（带消息）
+     * 创建失败响应（自定义消息）
      */
     public static <T> Result<T> error(String message) {
         return new Result<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), message, null);
     }
 
     /**
-     * 失败响应（带状态码和消息）
+     * 创建失败响应（自定义错误码和消息）
      */
     public static <T> Result<T> error(Integer code, String message) {
         return new Result<>(code, message, null);
     }
 
     /**
-     * 判断是否成功
+     * 判断是否为成功响应
      */
     public boolean isSuccess() {
         return HttpStatus.OK.value() == this.code;
-    }
-
-    @Override
-    public String toString() {
-        return JSON.toJSONString(this);
     }
 }
