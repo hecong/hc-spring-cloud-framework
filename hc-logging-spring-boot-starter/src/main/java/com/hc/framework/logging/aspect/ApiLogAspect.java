@@ -1,6 +1,7 @@
 package com.hc.framework.logging.aspect;
 
 import com.hc.framework.logging.config.LoggingProperties;
+import com.hc.framework.logging.util.ServletUtils;
 import com.hc.framework.logging.util.TraceIdUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +59,7 @@ public class ApiLogAspect {
 
         // 基础信息
         String method = request.getMethod();
-        String clientIp = getClientIp(request);
+        String clientIp = ServletUtils.getClientIp(request);
         String traceId = TraceIdUtils.getTraceId();
 
         // 记录请求参数
@@ -89,24 +90,5 @@ public class ApiLogAspect {
         }
     }
 
-    /**
-     * 获取客户端IP
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        // 多个代理情况，取第一个IP
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
-    }
+
 }

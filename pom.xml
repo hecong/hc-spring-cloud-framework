@@ -9,6 +9,7 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
+        <module>hc-common-spring-boot-starter</module>
         <module>hc-excel-spring-boot-starter</module>
         <module>hc-redis-spring-boot-starter</module>
         <module>hc-web-spring-boot-starter</module>

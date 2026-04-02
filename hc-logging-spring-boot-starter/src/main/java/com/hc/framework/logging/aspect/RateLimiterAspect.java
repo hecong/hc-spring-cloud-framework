@@ -10,6 +10,7 @@ import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
 import com.hc.framework.logging.annotation.RateLimiter;
 import com.hc.framework.logging.config.LoggingProperties;
+import com.hc.framework.logging.util.ServletUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -94,7 +95,7 @@ public class RateLimiterAspect {
                 ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
                 if (attributes != null) {
                     HttpServletRequest request = attributes.getRequest();
-                    String ip = getClientIp(request);
+                    String ip = ServletUtils.getClientIp(request);
                     return baseName + "_IP:" + ip;
                 }
                 return baseName + "_IP:unknown";
@@ -139,25 +140,7 @@ public class RateLimiterAspect {
         }
     }
 
-    /**
-     * 获取客户端IP（复用ApiLogAspect逻辑）
-     */
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
-    }
+
 
     /**
      * 获取当前登录用户ID（需根据业务实现，示例返回null）
