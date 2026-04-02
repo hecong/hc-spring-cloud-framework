@@ -1,6 +1,5 @@
 package com.hc.framework.redis.lock;
 
-import cn.hutool.core.util.StrUtil;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 

@@ -1,5 +1,6 @@
 package com.hc.framework.logging.interceptor;
 
+import com.hc.framework.common.constant.HttpConstants;
 import com.hc.framework.logging.util.TraceIdUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,7 +14,7 @@ public class TraceIdInterceptor implements HandlerInterceptor {
     /**
      * 请求头中的TraceId key
      */
-    private static final String TRACE_ID_HEADER = "X-Trace-Id";
+    private static final String TRACE_ID_HEADER = HttpConstants.HEADER_TRACE_ID;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

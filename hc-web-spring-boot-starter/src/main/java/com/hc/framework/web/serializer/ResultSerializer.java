@@ -26,6 +26,14 @@ public class ResultSerializer extends JsonSerializer<Result<?>> {
     }
 
     @Override
+    public Class<Result<?>> handledType() {
+        // 返回原始类型，用于 Jackson 类型匹配
+        @SuppressWarnings("unchecked")
+        Class<Result<?>> type = (Class<Result<?>>) (Class<?>) Result.class;
+        return type;
+    }
+
+    @Override
     public void serialize(Result<?> result, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         // 获取配置的字段名
         String codeField = webProperties.getCodeField();

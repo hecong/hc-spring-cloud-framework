@@ -1,7 +1,7 @@
 package com.hc.framework.redis.util;
 
-import cn.hutool.core.collection.CollUtil;
 import lombok.RequiredArgsConstructor;
+import org.dromara.hutool.core.collection.CollUtil;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.List;

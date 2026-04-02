@@ -8,9 +8,9 @@ import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.csp.sentinel.slots.block.RuleConstant;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRule;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
+import com.hc.framework.common.util.IpUtils;
 import com.hc.framework.logging.annotation.RateLimiter;
 import com.hc.framework.logging.config.LoggingProperties;
-import com.hc.framework.logging.util.ServletUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +24,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
-import java.util.Objects;
 
 /**
  * 接口限流切面
@@ -95,7 +94,7 @@ public class RateLimiterAspect {
                 ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
                 if (attributes != null) {
                     HttpServletRequest request = attributes.getRequest();
-                    String ip = ServletUtils.getClientIp(request);
+                    String ip = IpUtils.getClientIp(request);
                     return baseName + "_IP:" + ip;
                 }
                 return baseName + "_IP:unknown";

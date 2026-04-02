@@ -1,5 +1,6 @@
 package com.hc.framework.logging.interceptor;
 
+import com.hc.framework.common.constant.HttpConstants;
 import com.hc.framework.logging.util.TraceIdUtils;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
@@ -33,7 +34,7 @@ public class FeignTraceIdInterceptor implements RequestInterceptor {
     /**
      * TraceId 请求头名称
      */
-    private static final String TRACE_ID_HEADER = "X-Trace-Id";
+    private static final String TRACE_ID_HEADER = HttpConstants.HEADER_TRACE_ID;
 
     /**
      * 拦截 Feign 请求，添加 TraceId 请求头

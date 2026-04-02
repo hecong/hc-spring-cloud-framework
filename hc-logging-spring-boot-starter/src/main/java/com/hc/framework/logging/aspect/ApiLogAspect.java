@@ -1,7 +1,7 @@
 package com.hc.framework.logging.aspect;
 
+import com.hc.framework.common.util.IpUtils;
 import com.hc.framework.logging.config.LoggingProperties;
-import com.hc.framework.logging.util.ServletUtils;
 import com.hc.framework.logging.util.TraceIdUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +59,7 @@ public class ApiLogAspect {
 
         // 基础信息
         String method = request.getMethod();
-        String clientIp = ServletUtils.getClientIp(request);
+        String clientIp = IpUtils.getClientIp(request);
         String traceId = TraceIdUtils.getTraceId();
 
         // 记录请求参数

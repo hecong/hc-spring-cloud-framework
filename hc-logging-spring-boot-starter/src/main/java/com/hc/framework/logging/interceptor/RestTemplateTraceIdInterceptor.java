@@ -1,5 +1,6 @@
 package com.hc.framework.logging.interceptor;
 
+import com.hc.framework.common.constant.HttpConstants;
 import com.hc.framework.logging.util.TraceIdUtils;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
@@ -46,7 +47,7 @@ public class RestTemplateTraceIdInterceptor implements ClientHttpRequestIntercep
     /**
      * TraceId 请求头名称
      */
-    private static final String TRACE_ID_HEADER = "X-Trace-Id";
+    private static final String TRACE_ID_HEADER = HttpConstants.HEADER_TRACE_ID;
 
     /**
      * 拦截 RestTemplate 请求，添加 TraceId 请求头

@@ -1,7 +1,9 @@
 package com.hc.framework.redis.core;
 
-import cn.hutool.core.util.NumberUtil;
-import cn.hutool.core.util.StrUtil;
+
+import org.dromara.hutool.core.math.NumberUtil;
+import org.dromara.hutool.core.text.StrUtil;
+import org.dromara.hutool.core.text.split.SplitUtil;
 import org.springframework.data.redis.cache.RedisCache;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
@@ -29,7 +31,7 @@ public class TimeoutRedisCacheManager extends RedisCacheManager {
             return super.createRedisCache(name, cacheConfig);
         }
         // 如果使用 # 分隔，大小不为 2，则说明不使用自定义过期时间
-        String[] names = StrUtil.splitToArray(name, SPLIT);
+        String[] names = SplitUtil.splitToArray(name, SPLIT);
         if (names.length != 2) {
             return super.createRedisCache(name, cacheConfig);
         }

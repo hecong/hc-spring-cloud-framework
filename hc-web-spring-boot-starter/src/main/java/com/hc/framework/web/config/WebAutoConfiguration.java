@@ -3,7 +3,6 @@ package com.hc.framework.web.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.hc.framework.web.exception.GlobalExceptionHandler;
-import com.hc.framework.web.model.Result;
 import com.hc.framework.web.serializer.ResultSerializer;
 import com.hc.framework.web.wrapper.ResponseWrapAdvice;
 import com.hc.framework.web.xss.XssFilter;
@@ -103,7 +102,8 @@ public class WebAutoConfiguration {
         SimpleModule module = new SimpleModule();
 
         // 注册 Result 序列化器（支持动态字段名）
-        module.addSerializer(Result.class, new ResultSerializer(webProperties));
+        // 使用 addSerializer(JsonSerializer<?>) 让 Jackson 自动检测类型
+        module.addSerializer(new ResultSerializer(webProperties));
 
         // 注册 String 反序列化器（XSS 过滤）
         module.addDeserializer(String.class, new XssStringDeserializer());
