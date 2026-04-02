@@ -11,6 +11,11 @@
     <modules>
         <module>hc-excel-spring-boot-starter</module>
         <module>hc-redis-spring-boot-starter</module>
+        <module>hc-web-spring-boot-starter</module>
+        <module>hc-mybatis-plus-spring-boot-starter</module>
+        <module>hc-satoken-spring-boot-starter</module>
+        <module>hc-logging-spring-boot-starter</module>
+        <module>hc-oss-spring-boot-starter</module>
     </modules>
 
     <properties>
@@ -29,6 +34,15 @@
         <fastjson2.version>2.0.43</fastjson2.version>
         <transmittable-thread-local.version>2.14.5</transmittable-thread-local.version>
         <redisson.version>3.27.0</redisson.version>
+        <!-- MyBatis-Plus -->
+        <mybatis-plus.version>3.5.6</mybatis-plus.version>
+        <!-- Sa-Token -->
+        <satoken.version>1.39.0</satoken.version>
+        <!-- Sentinel -->
+        <sentinel.version>1.8.8</sentinel.version>
+        <!-- OSS -->
+        <aliyun-oss.version>3.17.4</aliyun-oss.version>
+        <minio.version>8.5.10</minio.version>
     </properties>
 
     <dependencyManagement>
@@ -76,6 +90,45 @@
                 <groupId>org.redisson</groupId>
                 <artifactId>redisson-spring-boot-starter</artifactId>
                 <version>${redisson.version}</version>
+            </dependency>
+            <!-- MyBatis-Plus -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!-- Sa-Token -->
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-spring-boot3-starter</artifactId>
+                <version>${satoken.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-redis-jackson</artifactId>
+                <version>${satoken.version}</version>
+            </dependency>
+            <!-- Sentinel -->
+            <dependency>
+                <groupId>com.alibaba.csp</groupId>
+                <artifactId>sentinel-core</artifactId>
+                <version>${sentinel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.csp</groupId>
+                <artifactId>sentinel-annotation-aspectj</artifactId>
+                <version>${sentinel.version}</version>
+            </dependency>
+            <!-- OSS -->
+            <dependency>
+                <groupId>com.aliyun.oss</groupId>
+                <artifactId>aliyun-sdk-oss</artifactId>
+                <version>${aliyun-oss.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
