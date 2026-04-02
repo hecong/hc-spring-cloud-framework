@@ -20,7 +20,7 @@ import java.util.Map;
  * <p>配置说明：</p>
  * <ul>
  *     <li>忽略 JSON 中的未知字段（{@link DeserializationFeature#FAIL_ON_UNKNOWN_PROPERTIES} = false）</li>
- *     <li>null 字段不参与序列化（{@link JsonInclude#NON_NULL}）</li>
+ *     <li>null 字段不参与序列化（ ）</li>
  *     <li>日期不序列化为时间戳（{@link SerializationFeature#WRITE_DATES_AS_TIMESTAMPS} = false）</li>
  *     <li>支持 Java 8 时间模块（{@link JavaTimeModule}）</li>
  * </ul>

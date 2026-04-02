@@ -196,7 +196,7 @@ public class ExcelImportServiceImpl implements ExcelImportService {
      */
     private <T> ReadListener<T> createReadListener(SheetConfig<T> config, List<T> dataList,
                                                    List<SheetError> errorList, MultiSheetContext context) {
-        return new ReadListener<T>() {
+        return new ReadListener<>() {
             private final List<T> batchCache = new ArrayList<>();
 
             @Override

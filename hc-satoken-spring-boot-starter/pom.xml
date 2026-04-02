@@ -24,6 +24,12 @@
             <artifactId>hc-web-spring-boot-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- hc-common-spring-boot-starter -->
+        <dependency>
+            <groupId>com.hnhegui.market</groupId>
+            <artifactId>hc-common-spring-boot-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -35,25 +41,41 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- Sa-Token -->
+        <!-- Spring Cloud Context（支持 @RefreshScope） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-context</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- Sa-Token Core -->
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-spring-boot3-starter</artifactId>
         </dependency>
-        <!-- Sa-Token Redis -->
+        <!-- Sa-Token Redis（使用 Jackson 序列化） -->
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redis-jackson</artifactId>
         </dependency>
-        <!-- Spring Data Redis -->
+        <!-- hc-redis-spring-boot-starter -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <groupId>com.hnhegui.market</groupId>
+            <artifactId>hc-redis-spring-boot-starter</artifactId>
+            <version>${project.version}</version>
         </dependency>
-        <!-- Fastjson2 -->
+        <!-- Sa-Token JWT（可选，JWT Token 模式） -->
         <dependency>
-            <groupId>com.alibaba.fastjson2</groupId>
-            <artifactId>fastjson2</artifactId>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-jwt</artifactId>
+            <version>${satoken.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <!-- Sa-Token SSO（可选，单点登录） -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-sso</artifactId>
+            <version>${satoken.version}</version>
+            <optional>true</optional>
         </dependency>
         <!-- Lombok -->
         <dependency>
