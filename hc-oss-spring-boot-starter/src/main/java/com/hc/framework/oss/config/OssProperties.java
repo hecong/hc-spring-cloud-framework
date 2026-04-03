@@ -31,6 +31,11 @@ public class OssProperties {
     private MinioConfig minio = new MinioConfig();
 
     /**
+     * 腾讯云COS配置
+     */
+    private TencentCosConfig tencentCos = new TencentCosConfig();
+
+    /**
      * 阿里云OSS配置
      */
     @Data
@@ -95,5 +100,44 @@ public class OssProperties {
          * Bucket名称
          */
         private String bucketName;
+    }
+
+    /**
+     * 腾讯云COS配置
+     */
+    @Data
+    public static class TencentCosConfig {
+        /**
+         * 是否启用
+         */
+        private Boolean enabled = false;
+
+        /**
+         * 地域（如：ap-guangzhou）
+         */
+        private String region;
+
+        /**
+         * SecretId
+         */
+        private String secretId;
+
+        /**
+         * SecretKey
+         */
+        private String secretKey;
+
+        /**
+         * Bucket名称
+         */
+        private String bucketName;
+
+        /**
+         * 自定义域名（用于生成签名URL）
+         * <p>
+         * 配置后，访问URL将使用自定义域名而非COS默认域名，
+         * 需要在客户端初始化时设置，才能实现自定义域名的URL签名
+         */
+        private String domain;
     }
 }
