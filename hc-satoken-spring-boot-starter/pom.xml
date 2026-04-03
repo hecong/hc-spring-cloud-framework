@@ -83,6 +83,13 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- hc-mybatis-plus-spring-boot-starter（可选，用于集成 MyBatis-Plus 自动填充） -->
+        <dependency>
+            <groupId>com.hnhegui.market</groupId>
+            <artifactId>hc-mybatis-plus-spring-boot-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
         <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -154,6 +154,14 @@ public class SaTokenHelper {
     }
 
     /**
+     * 获取当前登录用户ID（字符串类型）
+     * @return 用户ID字符串
+     */
+    public String getCurrentUserIdString() {
+        return StpUtil.getLoginIdAsString();
+    }
+
+    /**
      * 获取当前 Token 值
      *
      * @return Token字符串
