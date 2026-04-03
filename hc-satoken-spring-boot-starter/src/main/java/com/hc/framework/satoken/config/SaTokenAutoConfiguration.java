@@ -5,6 +5,7 @@ import cn.dev33.satoken.stp.StpInterface;
 import com.hc.framework.redis.util.RedisCacheUtils;
 import com.hc.framework.satoken.handler.SaPermissionProvider;
 import com.hc.framework.satoken.handler.SaTokenAuthLogger;
+import com.hc.framework.satoken.handler.SaTokenExceptionHandler;
 import com.hc.framework.satoken.handler.SaTokenStpInterfaceImpl;
 import com.hc.framework.satoken.scheduler.SaTokenCleanScheduler;
 import com.hc.framework.satoken.service.SaJwtTokenService;
@@ -208,6 +209,17 @@ public class SaTokenAutoConfiguration {
     @ConditionalOnMissingBean
     public SaTokenAuthLogger saTokenAuthLogger() {
         return new SaTokenAuthLogger(saTokenProperties);
+    }
+
+    /**
+     * Sa-Token 全局异常处理器
+     *
+     * <p>统一处理 Sa-Token 相关异常，返回标准响应格式。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SaTokenExceptionHandler saTokenExceptionHandler(SaTokenAuthLogger authLogger) {
+        return new SaTokenExceptionHandler(authLogger);
     }
 
     /**

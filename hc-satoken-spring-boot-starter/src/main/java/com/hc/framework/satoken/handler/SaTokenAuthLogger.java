@@ -4,9 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.hc.framework.common.util.IpUtils;
 import com.hc.framework.satoken.config.SaTokenProperties;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -42,11 +40,18 @@ import java.time.format.DateTimeFormatter;
  * @since 1.0.0
  */
 @Slf4j
-@Component
-@RequiredArgsConstructor
 public class SaTokenAuthLogger {
 
     private final SaTokenProperties saTokenProperties;
+
+    /**
+     * 构造器注入
+     *
+     * @param saTokenProperties Sa-Token 配置属性
+     */
+    public SaTokenAuthLogger(SaTokenProperties saTokenProperties) {
+        this.saTokenProperties = saTokenProperties;
+    }
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 

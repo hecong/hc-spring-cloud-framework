@@ -2,7 +2,6 @@ package com.hc.framework.satoken.handler;
 
 import cn.dev33.satoken.exception.*;
 import com.hc.framework.web.model.Result;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -37,10 +36,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @Order(-1)
 @RestControllerAdvice
-@RequiredArgsConstructor
 public class SaTokenExceptionHandler {
 
     private final SaTokenAuthLogger authLogger;
+
+    /**
+     * 构造器注入
+     *
+     * @param authLogger 认证日志记录器
+     */
+    public SaTokenExceptionHandler(SaTokenAuthLogger authLogger) {
+        this.authLogger = authLogger;
+    }
 
     /**
      * 处理未登录异常
