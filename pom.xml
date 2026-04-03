@@ -15,6 +15,7 @@
         <module>hc-web-spring-boot-starter</module>
         <module>hc-mybatis-plus-spring-boot-starter</module>
         <module>hc-satoken-spring-boot-starter</module>
+        <module>hc-satoken-gateway-spring-boot-starter</module>
         <module>hc-logging-spring-boot-starter</module>
         <module>hc-oss-spring-boot-starter</module>
     </modules>
@@ -119,6 +120,12 @@
             <dependency>
                 <groupId>cn.dev33</groupId>
                 <artifactId>sa-token-spring-boot3-starter</artifactId>
+                <version>${satoken.version}</version>
+            </dependency>
+            <!-- Sa-Token Reactor（网关专用） -->
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
                 <version>${satoken.version}</version>
             </dependency>
             <dependency>

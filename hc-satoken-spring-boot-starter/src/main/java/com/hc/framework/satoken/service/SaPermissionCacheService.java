@@ -70,7 +70,6 @@ public class SaPermissionCacheService {
      * @param loader 数据加载器（缓存未命中时调用）
      * @return 角色列表
      */
-    @SuppressWarnings("unchecked")
     public List<String> getRoles(Long userId, RoleLoader loader) {
         if (!isCacheEnabled()) {
             return loader.load();
@@ -109,7 +108,6 @@ public class SaPermissionCacheService {
      * @param loader 数据加载器（缓存未命中时调用）
      * @return 权限列表
      */
-    @SuppressWarnings("unchecked")
     public List<String> getPermissions(Long userId, PermissionLoader loader) {
         if (!isCacheEnabled()) {
             return loader.load();
