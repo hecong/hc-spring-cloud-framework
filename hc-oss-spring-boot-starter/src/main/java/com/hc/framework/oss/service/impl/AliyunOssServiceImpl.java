@@ -1,5 +1,6 @@
 package com.hc.framework.oss.service.impl;
 
+import com.aliyun.oss.ClientBuilderConfiguration;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.hc.framework.oss.config.OssProperties;
@@ -27,9 +28,23 @@ public class AliyunOssServiceImpl implements OssService {
 
     @PostConstruct
     public void init() {
-        this.ossClient = new OSSClientBuilder()
-                .build(config.getEndpoint(), config.getAccessKeyId(), config.getAccessKeySecret());
-        log.info("阿里云OSS客户端初始化完成");
+        ClientBuilderConfiguration clientBuilderConfiguration = new ClientBuilderConfiguration();
+        // 开启CNAME选项以支持自定义域名访问
+        clientBuilderConfiguration.setSupportCname(true);
+
+        String endpoint = config.getEndpoint();
+        // 如果配置了自定义域名，使用自定义域名作为Endpoint
+        if (config.getDomain() != null && !config.getDomain().isEmpty()) {
+            endpoint = config.getDomain();
+        }
+
+        this.ossClient = new OSSClientBuilder().build(
+                endpoint,
+                config.getAccessKeyId(),
+                config.getAccessKeySecret(),
+                clientBuilderConfiguration
+        );
+        log.info("阿里云OSS客户端初始化完成, endpoint: {}", endpoint);
     }
 
     @PreDestroy
