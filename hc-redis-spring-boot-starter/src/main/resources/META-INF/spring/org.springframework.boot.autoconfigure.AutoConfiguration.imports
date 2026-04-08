@@ -1,0 +1,3 @@
+com.hc.framework.redis.config.RedisAutoConfiguration
+com.hc.framework.redis.config.CacheAutoConfiguration
+

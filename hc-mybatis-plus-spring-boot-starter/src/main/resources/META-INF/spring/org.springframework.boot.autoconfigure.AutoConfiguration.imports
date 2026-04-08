@@ -1,0 +1,2 @@
+com.hc.framework.mybatis.config.MyBatisPlusConfig
+com.hc.framework.mybatis.config.DynamicDataSourceConfig
