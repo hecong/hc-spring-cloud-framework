@@ -142,15 +142,6 @@ public class PivotTableHeads {
     }
 
     /**
-     * 创建空表头构建器
-     *
-     * @return 构建器
-     */
-    public static PivotTableHeadsBuilder builder() {
-        return new PivotTableHeadsBuilder();
-    }
-
-    /**
      * 获取固定列数量
      *
      * @return 固定列数量

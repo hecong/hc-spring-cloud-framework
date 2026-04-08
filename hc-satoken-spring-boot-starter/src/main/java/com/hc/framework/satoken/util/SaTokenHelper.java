@@ -371,4 +371,25 @@ public class SaTokenHelper {
     public List<String> getExcludePaths() {
         return saTokenProperties.getAllExcludePaths();
     }
+
+
+    //=========================权限============================
+    /**
+     * 获取所有角色
+     *
+     * @return 获取角色列表
+     */
+    public List<String> getRoleList(){
+        Object loginId = StpUtil.getLoginId();
+        return StpUtil.getRoleList(loginId);
+    }
+
+    /**
+     * 获取所有权限
+     * @return 获取所有权限
+     */
+    public List<String> getPermissionList(){
+        Object loginId = StpUtil.getLoginId();
+        return StpUtil.getPermissionList(loginId);
+    }
 }

@@ -22,7 +22,7 @@ import org.springframework.util.StringUtils;
 import java.util.Objects;
 
 @AutoConfiguration
-@EnableConfigurationProperties({CustomCacheProperties.class})
+@EnableConfigurationProperties({CacheProperties.class, CustomCacheProperties.class})
 @EnableCaching
 public class CacheAutoConfiguration {
 

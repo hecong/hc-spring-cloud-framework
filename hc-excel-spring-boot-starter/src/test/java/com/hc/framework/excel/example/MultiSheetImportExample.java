@@ -3,7 +3,6 @@ package com.hc.framework.excel.example;
 import com.hc.framework.excel.model.multisheet.MultiSheetImportResult;
 import com.hc.framework.excel.model.multisheet.SheetError;
 import com.hc.framework.excel.model.multisheet.ValidationResult;
-import com.hnhegui.framework.excel.model.multisheet.*;
 import com.hc.framework.excel.service.ExcelImportService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

@@ -1,8 +1,8 @@
 package com.hc.framework.satoken.util;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -49,7 +49,11 @@ public class SaPasswordEncoder {
 
     /**
      * 默认算法
+     * -- GETTER --
+     *  获取默认加密算法
+     *
      */
+    @Getter
     private static volatile PasswordAlgorithm defaultAlgorithm = PasswordAlgorithm.BCRYPT;
 
     /**
@@ -71,15 +75,6 @@ public class SaPasswordEncoder {
             defaultAlgorithm = algorithm;
             log.info("SaPasswordEncoder 默认算法已切换为: {}", algorithm);
         }
-    }
-
-    /**
-     * 获取默认加密算法
-     *
-     * @return 默认加密算法
-     */
-    public static PasswordAlgorithm getDefaultAlgorithm() {
-        return defaultAlgorithm;
     }
 
     /**

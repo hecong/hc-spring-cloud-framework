@@ -53,7 +53,6 @@ public class LockTemplate {
      * @param lockKey 锁的key值
      * @param action 业务方法接口实现
      */
-    @Nullable
     public void execute(String lockKey, Runnable action) {
         this.execute(lockKey, DEFAULT_WAIT_TIME, null, DEFAULT_LEASE_TIME, LockType.REDIS_REENTRANT_LOCK, action);
     }
@@ -75,7 +74,6 @@ public class LockTemplate {
      * @param errorMsg 获取锁超时，抛出ServiceException异常信息
      * @param action 业务方法接口实现
      */
-    @Nullable
     public void execute(String lockKey, String errorMsg, Runnable action) {
         this.execute(lockKey, DEFAULT_WAIT_TIME, errorMsg, DEFAULT_LEASE_TIME, LockType.REDIS_REENTRANT_LOCK, action);
     }
@@ -87,7 +85,6 @@ public class LockTemplate {
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
      */
-    @Nullable
     public void execute(String lockKey, String errorMsg, LockType lockType, Runnable action) {
         this.execute(lockKey, DEFAULT_WAIT_TIME, errorMsg, DEFAULT_LEASE_TIME, lockType, action);
     }
@@ -152,7 +149,6 @@ public class LockTemplate {
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
      */
-    @Nullable
     private void execute(String lockKey, int waitTime, String errorMsg, int leaseTime, LockType lockType, Runnable action) {
         this.handleLock(lockKey, waitTime, errorMsg, leaseTime, lockType, action);
     }
@@ -212,7 +208,6 @@ public class LockTemplate {
      * @param lockKeys 锁的key值 数组
      * @param action 业务方法接口实现
      */
-    @Nullable
     public void execute(Collection<String> lockKeys, Runnable action) {
         this.handleLock(lockKeys, DEFAULT_WAIT_TIME, null, DEFAULT_LEASE_TIME, LockType.REDIS_REENTRANT_LOCK, action);
     }
