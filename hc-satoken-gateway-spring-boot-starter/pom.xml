@@ -22,20 +22,19 @@
     <dependencies>
         <!-- hc-common-spring-boot-starter -->
         <dependency>
-            <groupId>com.hnhegui.market</groupId>
+            <groupId>com.hnhegui.framework</groupId>
             <artifactId>hc-common-spring-boot-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- hc-redis-spring-boot-starter -->
         <dependency>
-            <groupId>com.hnhegui.market</groupId>
+            <groupId>com.hnhegui.framework</groupId>
             <artifactId>hc-redis-spring-boot-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- Spring Cloud Gateway -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
+            <scope>provided</scope>
         </dependency>
         <!-- Spring Boot Configuration Processor -->
         <dependency>
@@ -54,16 +53,15 @@
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
         </dependency>
-        <!-- Sa-Token Redis（使用 Jackson 序列化） -->
+
         <dependency>
             <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-redis-jackson</artifactId>
+            <artifactId>sa-token-redis-template</artifactId>
         </dependency>
         <!-- Sa-Token JWT（可选，JWT Token 模式） -->
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-jwt</artifactId>
-            <version>${satoken.version}</version>
             <optional>true</optional>
         </dependency>
         <!-- Lombok -->

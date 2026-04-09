@@ -41,7 +41,8 @@
         <!-- MyBatis-Plus -->
         <mybatis-plus.version>3.5.6</mybatis-plus.version>
         <!-- Sa-Token -->
-        <satoken.version>1.39.0</satoken.version>
+        <satoken.version>1.45.0</satoken.version>
+        <satoken.redis.version>1.45.0</satoken.redis.version>
         <!-- Sentinel -->
         <sentinel.version>1.8.8</sentinel.version>
         <!-- OSS -->
@@ -65,6 +66,14 @@
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-bom</artifactId>
+                <version>${satoken.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -116,23 +125,29 @@
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
-            <!-- Sa-Token -->
-            <dependency>
-                <groupId>cn.dev33</groupId>
-                <artifactId>sa-token-spring-boot3-starter</artifactId>
-                <version>${satoken.version}</version>
-            </dependency>
-            <!-- Sa-Token Reactor（网关专用） -->
-            <dependency>
-                <groupId>cn.dev33</groupId>
-                <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
-                <version>${satoken.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>cn.dev33</groupId>
-                <artifactId>sa-token-redis-jackson</artifactId>
-                <version>${satoken.version}</version>
-            </dependency>
+<!--            &lt;!&ndash; Sa-Token &ndash;&gt;-->
+<!--            <dependency>-->
+<!--                <groupId>cn.dev33</groupId>-->
+<!--                <artifactId>sa-token-spring-boot3-starter</artifactId>-->
+<!--                <version>${satoken.version}</version>-->
+<!--            </dependency>-->
+<!--            &lt;!&ndash; Sa-Token Reactor（网关专用） &ndash;&gt;-->
+<!--            <dependency>-->
+<!--                <groupId>cn.dev33</groupId>-->
+<!--                <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>-->
+<!--                <version>${satoken.version}</version>-->
+<!--            </dependency>-->
+<!--            <dependency>-->
+<!--                <groupId>cn.dev33</groupId>-->
+<!--                <artifactId>sa-token-redis-jackson</artifactId>-->
+<!--                <version>${satoken.version}</version>-->
+<!--            </dependency>-->
+
+<!--            <dependency>-->
+<!--                <groupId>cn.dev33</groupId>-->
+<!--                <artifactId>sa-token-redis-template</artifactId>-->
+<!--                <version>${satoken.redis.version}</version>-->
+<!--            </dependency>-->
             <!-- Sentinel -->
             <dependency>
                 <groupId>com.alibaba.csp</groupId>
@@ -298,7 +313,7 @@
                 </plugin>
             </plugins>
         </pluginManagement>
-        
+
         <plugins>
             <!-- Maven 编译插件 -->
             <plugin>

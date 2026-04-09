@@ -20,7 +20,7 @@
     <dependencies>
         <!-- hc-web-spring-boot-starter -->
         <dependency>
-            <groupId>com.hnhegui.market</groupId>
+            <groupId>com.hnhegui.framework</groupId>
             <artifactId>hc-web-spring-boot-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -77,7 +77,7 @@
         </dependency>
 
         <dependency>
-            <groupId>com.hnhegui.market</groupId>
+            <groupId>com.hnhegui.framework</groupId>
             <artifactId>hc-common-spring-boot-starter</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
