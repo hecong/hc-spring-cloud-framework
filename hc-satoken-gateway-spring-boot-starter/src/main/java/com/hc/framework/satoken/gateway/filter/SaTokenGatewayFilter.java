@@ -3,6 +3,7 @@ package com.hc.framework.satoken.gateway.filter;
 import cn.dev33.satoken.reactor.filter.SaReactorFilter;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
+import com.hc.framework.satoken.gateway.handler.SaTokenGatewayErrorBuilder;
 import com.hc.framework.satoken.gateway.properties.SaTokenGatewayProperties;
 import com.hc.framework.satoken.gateway.properties.SaTokenGatewayProperties.AuthRoute;
 import lombok.extern.slf4j.Slf4j;
@@ -92,10 +93,11 @@ public class SaTokenGatewayFilter {
                         }
                     }
                 })
-                // 异常处理 - 直接抛出异常，由 SaTokenGatewayExceptionHandler 统一处理
-                // 这样可以确保返回统一的 Result 格式，支持自定义字段名
+                // 异常处理 - 直接返回统一格式的 JSON 响应
+                // 使用 SaTokenGatewayErrorBuilder 确保返回统一的 Result 格式
                 .setError(e -> {
-                    throw new RuntimeException(e);
+                    log.warn("Sa-Token 网关鉴权异常: {}", e.getMessage());
+                    return SaTokenGatewayErrorBuilder.buildErrorJson(e);
                 });
     }
 

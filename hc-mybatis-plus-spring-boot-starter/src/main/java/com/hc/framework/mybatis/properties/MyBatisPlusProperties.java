@@ -56,7 +56,7 @@ public class MyBatisPlusProperties {
         /**
          * 是否启用动态数据源
          */
-        private boolean enabled = true;
+        private boolean enabled = false;
 
         /**
          * 主数据源名称
