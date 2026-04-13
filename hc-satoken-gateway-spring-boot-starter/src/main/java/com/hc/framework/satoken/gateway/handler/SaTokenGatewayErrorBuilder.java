@@ -68,12 +68,10 @@ public class SaTokenGatewayErrorBuilder {
         if (e instanceof NotLoginException) {
             return getNotLoginMessage((NotLoginException) e);
         }
-        if (e instanceof NotPermissionException) {
-            NotPermissionException npe = (NotPermissionException) e;
+        if (e instanceof NotPermissionException npe) {
             return "无操作权限: " + npe.getPermission();
         }
-        if (e instanceof NotRoleException) {
-            NotRoleException nre = (NotRoleException) e;
+        if (e instanceof NotRoleException nre) {
             return "无访问权限，需要角色: " + nre.getRole();
         }
         if (e instanceof DisableServiceException) {

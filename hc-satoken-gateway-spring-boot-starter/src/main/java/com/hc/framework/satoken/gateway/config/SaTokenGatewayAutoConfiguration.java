@@ -1,17 +1,17 @@
 package com.hc.framework.satoken.gateway.config;
 
 import cn.dev33.satoken.reactor.filter.SaReactorFilter;
-import cn.dev33.satoken.stp.StpInterface;
 import com.hc.framework.satoken.gateway.filter.SaTokenGatewayFilter;
-import com.hc.framework.satoken.gateway.handler.SaGatewayPermissionProvider;
+import com.hc.framework.satoken.gateway.handler.SaGatewayDynamicRouteProvider;
 import com.hc.framework.satoken.gateway.handler.SaTokenGatewayExceptionHandler;
-import com.hc.framework.satoken.gateway.handler.SaTokenGatewayStpInterface;
 import com.hc.framework.satoken.gateway.properties.SaTokenGatewayProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
@@ -47,23 +47,6 @@ import org.springframework.context.annotation.Bean;
  *       forward-token: true
  * }</pre>
  *
- * <p>业务项目需要实现 {@link SaGatewayPermissionProvider} 接口提供权限数据：</p>
- * <pre>{@code
- * @Component
- * public class GatewayPermissionProviderImpl implements SaGatewayPermissionProvider {
- *     @Override
- *     public List<String> getRoles(Object loginId) {
- *         // 从远程服务获取角色
- *         return userServiceClient.getRoles(loginId).getData();
- *     }
- *
- *     @Override
- *     public List<String> getPermissions(Object loginId) {
- *         // 从远程服务获取权限
- *         return userServiceClient.getPermissions(loginId).getData();
- *     }
- * }
- * }</pre>
  *
  * @author hc-framework
  * @since 1.0.0
@@ -71,6 +54,7 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(SaTokenGatewayProperties.class)
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @ConditionalOnClass(name = "org.springframework.cloud.gateway.filter.GlobalFilter")
 @ConditionalOnProperty(prefix = "hc.satoken.gateway", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SaTokenGatewayAutoConfiguration {
@@ -86,18 +70,55 @@ public class SaTokenGatewayAutoConfiguration {
         this.properties = properties;
     }
 
+//    // 权限加载器
+//    @Bean
+//    public SaTokenGatewayStpInterface saTokenGatewayStpInterface(SaGatewayPermissionProvider provider) {
+//        return new SaTokenGatewayStpInterface(provider);
+//    }
+
+
+//    /**
+//     * 默认权限提供者（空实现）
+//     *
+//     * <p>当业务项目没有提供 SaGatewayPermissionProvider 实现时，使用此默认实现。</p>
+//     * <p>返回空的角色和权限列表，适用于仅需要登录认证的场景。</p>
+//     */
+//    @Bean
+//    @ConditionalOnMissingBean(SaGatewayPermissionProvider.class)
+//    public SaGatewayPermissionProvider defaultSaGatewayPermissionProvider() {
+//        log.warn("未配置 SaGatewayPermissionProvider，使用默认空实现（仅支持登录认证）");
+//        return new SaGatewayPermissionProvider() {
+//            @Override
+//            public Mono<List<String>> getRoles(Object loginId) {
+//                return Mono.just(Collections.emptyList());
+//            }
+//
+//            @Override
+//            public Mono<java.util.List<String>> getPermissions(Object loginId) {
+//                return Mono.just(Collections.emptyList());
+//            }
+//        };
+//    }
+
     /**
      * Sa-Token 网关过滤器
      *
      * <p>核心过滤器，处理网关层的统一鉴权。</p>
      * <p>添加 @RefreshScope 支持配置中心动态刷新。</p>
+     * <p>支持动态路由权限规则（优先级高于配置文件）。</p>
+     *
+     * @param dynamicRouteProvider 动态路由提供者（可选，业务实现）
      */
     @Bean
     @RefreshScope
     @ConditionalOnMissingBean
-    public SaTokenGatewayFilter saTokenGatewayFilter() {
-        log.info("=== Sa-Token 网关鉴权过滤器已初始化 ===");
-        return new SaTokenGatewayFilter(properties);
+    public SaTokenGatewayFilter saTokenGatewayFilter(
+        SaTokenGatewayProperties properties,
+        @Autowired(required = false) SaGatewayDynamicRouteProvider dynamicRouteProvider) {
+        if (dynamicRouteProvider != null) {
+            log.info("=== 动态路由权限提供者已启用，优先级高于配置文件 ===");
+        }
+        return new SaTokenGatewayFilter(properties, dynamicRouteProvider);
     }
 
     /**
@@ -135,37 +156,5 @@ public class SaTokenGatewayAutoConfiguration {
         return new SaTokenGatewayRefreshListener();
     }
 
-    /**
-     * 默认权限提供者（空实现）
-     *
-     * <p>当业务项目没有提供 SaGatewayPermissionProvider 实现时，使用此默认实现。</p>
-     * <p>返回空的角色和权限列表，适用于仅需要登录认证的场景。</p>
-     */
-    @Bean
-    @ConditionalOnMissingBean(SaGatewayPermissionProvider.class)
-    public SaGatewayPermissionProvider defaultSaGatewayPermissionProvider() {
-        log.warn("未配置 SaGatewayPermissionProvider，使用默认空实现（仅支持登录认证）");
-        return new SaGatewayPermissionProvider() {
-            @Override
-            public java.util.List<String> getRoles(Object loginId) {
-                return java.util.Collections.emptyList();
-            }
 
-            @Override
-            public java.util.List<String> getPermissions(Object loginId) {
-                return java.util.Collections.emptyList();
-            }
-        };
-    }
-
-    /**
-     * Sa-Token 权限数据加载接口实现
-     *
-     * <p>实现 StpInterface 接口，为网关提供角色和权限数据加载能力。</p>
-     */
-    @Bean
-    @ConditionalOnMissingBean(StpInterface.class)
-    public StpInterface stpInterface(SaGatewayPermissionProvider permissionProvider) {
-        return new SaTokenGatewayStpInterface(permissionProvider);
-    }
 }

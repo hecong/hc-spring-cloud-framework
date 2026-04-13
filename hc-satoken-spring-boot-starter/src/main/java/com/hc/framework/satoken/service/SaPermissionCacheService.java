@@ -8,6 +8,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static com.hc.framework.common.constant.CacheConstants.CACHE_PREFIX;
+import static com.hc.framework.common.constant.CacheConstants.PERMISSIONS_SUFFIX;
+import static com.hc.framework.common.constant.CacheConstants.ROLES_SUFFIX;
+
 /**
  * 权限缓存服务
  *
@@ -37,20 +41,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class SaPermissionCacheService {
 
-    /**
-     * 缓存 Key 前缀
-     */
-    private static final String CACHE_PREFIX = "satoken:cache:";
 
-    /**
-     * 角色缓存后缀
-     */
-    private static final String ROLES_SUFFIX = ":roles:";
-
-    /**
-     * 权限缓存后缀
-     */
-    private static final String PERMISSIONS_SUFFIX = ":permissions:";
 
     private final RedisCacheUtils redisCacheUtils;
     private final SaTokenProperties properties;
@@ -71,7 +62,7 @@ public class SaPermissionCacheService {
      * @return 角色列表
      */
     public List<String> getRoles(Long userId, RoleLoader loader) {
-        if (!isCacheEnabled()) {
+        if (isCacheDisabled()) {
             return loader.load();
         }
 
@@ -109,7 +100,7 @@ public class SaPermissionCacheService {
      * @return 权限列表
      */
     public List<String> getPermissions(Long userId, PermissionLoader loader) {
-        if (!isCacheEnabled()) {
+        if (isCacheDisabled()) {
             return loader.load();
         }
 
@@ -145,7 +136,7 @@ public class SaPermissionCacheService {
      * @param userId 用户ID
      */
     public void clearUserCache(Long userId) {
-        if (!isCacheEnabled()) {
+        if (isCacheDisabled()) {
             return;
         }
 
@@ -162,7 +153,7 @@ public class SaPermissionCacheService {
      * 清除所有用户权限缓存
      */
     public void clearAllCache() {
-        if (!isCacheEnabled()) {
+        if (isCacheDisabled()) {
             return;
         }
 
@@ -182,7 +173,7 @@ public class SaPermissionCacheService {
      * @param permissions 权限列表
      */
     public void refreshUserCache(Long userId, List<String> roles, List<String> permissions) {
-        if (!isCacheEnabled()) {
+        if (isCacheDisabled()) {
             return;
         }
 
@@ -208,8 +199,8 @@ public class SaPermissionCacheService {
     /**
      * 判断缓存是否启用
      */
-    private boolean isCacheEnabled() {
-        return Boolean.TRUE.equals(properties.getPermission().getCacheEnabled());
+    private boolean isCacheDisabled() {
+        return !Boolean.TRUE.equals(properties.getPermission().getCacheEnabled());
     }
 
     /**
@@ -224,14 +215,14 @@ public class SaPermissionCacheService {
      * 获取角色缓存 Key
      */
     private String getRolesCacheKey(Long userId) {
-        return CACHE_PREFIX + ROLES_SUFFIX + userId;
+        return ROLES_SUFFIX + userId;
     }
 
     /**
      * 获取权限缓存 Key
      */
     private String getPermissionsCacheKey(Long userId) {
-        return CACHE_PREFIX + PERMISSIONS_SUFFIX + userId;
+        return PERMISSIONS_SUFFIX + userId;
     }
 
     // ==================== 函数式接口 ====================

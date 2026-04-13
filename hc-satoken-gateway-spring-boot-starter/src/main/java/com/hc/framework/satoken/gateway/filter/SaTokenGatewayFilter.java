@@ -1,129 +1,128 @@
 package com.hc.framework.satoken.gateway.filter;
 
+import cn.dev33.satoken.context.SaHolder;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import cn.dev33.satoken.reactor.filter.SaReactorFilter;
-import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
+import com.hc.framework.common.model.DynamicAuthRoute;
+import com.hc.framework.satoken.gateway.handler.SaGatewayDynamicRouteProvider;
 import com.hc.framework.satoken.gateway.handler.SaTokenGatewayErrorBuilder;
 import com.hc.framework.satoken.gateway.properties.SaTokenGatewayProperties;
 import com.hc.framework.satoken.gateway.properties.SaTokenGatewayProperties.AuthRoute;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-/**
- * Sa-Token 网关鉴权过滤器
- *
- * <p>基于 Spring Cloud Gateway 和 Sa-Token Reactor 实现统一鉴权。</p>
- *
- * <p>功能特性：</p>
- * <ul>
- *   <li>支持 Ant 风格路径匹配</li>
- *   <li>支持登录校验</li>
- *   <li>支持角色校验</li>
- *   <li>支持权限校验</li>
- *   <li>支持自定义排除路径</li>
- * </ul>
- *
- * @author hc-framework
- * @since 1.0.0
- */
 @Slf4j
 public class SaTokenGatewayFilter {
 
     private final SaTokenGatewayProperties properties;
+    private final SaGatewayDynamicRouteProvider dynamicRouteProvider;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     /**
-     * 构造器注入
+     * 构造器
      *
-     * @param properties 网关配置属性
+     * @param properties            网关配置属性
+     * @param dynamicRouteProvider  动态路由提供者（可选）
      */
-    public SaTokenGatewayFilter(SaTokenGatewayProperties properties) {
+    public SaTokenGatewayFilter(SaTokenGatewayProperties properties,
+                                SaGatewayDynamicRouteProvider dynamicRouteProvider) {
         this.properties = properties;
+        this.dynamicRouteProvider = dynamicRouteProvider;
     }
 
-    /**
-     * 创建 Sa-Token Reactor 过滤器
-     *
-     * @return SaReactorFilter 实例
-     */
+    // 创建过滤器
     public SaReactorFilter createFilter() {
-        // 构建排除路径数组
         String[] excludePaths = properties.getExcludePaths().toArray(new String[0]);
 
         return new SaReactorFilter()
-                // 拦截所有路径
-                .addInclude("/**")
-                // 排除路径
-                .addExclude(excludePaths)
-                // 鉴权规则
-                .setAuth(obj -> {
-                    // 遍历所有鉴权路由配置
-                    if (!CollectionUtils.isEmpty(properties.getAuthRoutes())) {
-                        for (AuthRoute route : properties.getAuthRoutes()) {
-                            // 登录校验
-                            if (Boolean.TRUE.equals(route.getRequireLogin())) {
-                                SaRouter.match(route.getPath(), StpUtil::checkLogin);
-                            }
-                            // 角色校验
-                            if (hasText(route.getRequireRole())) {
-                                List<String> roles = parseList(route.getRequireRole());
-                                SaRouter.match(route.getPath(), () -> {
-                                    boolean hasAnyRole = roles.stream().anyMatch(StpUtil::hasRole);
-                                    if (!hasAnyRole) {
-                                        throw new cn.dev33.satoken.exception.NotRoleException(
-                                                String.join(",", roles), StpUtil.getLoginType());
-                                    }
-                                });
-                            }
-                            // 权限校验
-                            if (hasText(route.getRequirePermission())) {
-                                List<String> permissions = parseList(route.getRequirePermission());
-                                SaRouter.match(route.getPath(), () -> {
-                                    boolean hasAnyPermission = permissions.stream()
-                                            .anyMatch(StpUtil::hasPermission);
-                                    if (!hasAnyPermission) {
-                                        throw new cn.dev33.satoken.exception.NotPermissionException(
-                                                String.join(",", permissions), StpUtil.getLoginType());
-                                    }
-                                });
-                            }
-                        }
-                    }
-                })
-                // 异常处理 - 直接返回统一格式的 JSON 响应
-                // 使用 SaTokenGatewayErrorBuilder 确保返回统一的 Result 格式
-                .setError(e -> {
-                    log.warn("Sa-Token 网关鉴权异常: {}", e.getMessage());
-                    return SaTokenGatewayErrorBuilder.buildErrorJson(e);
-                });
+            .addInclude("/**")
+            .addExclude(excludePaths)
+            // 核心：同步鉴权（权限数据已在 StpInterface 中响应式获取并缓存）
+            .setAuth(obj -> {
+                // 1. 登录校验
+                StpUtil.checkLogin();
+                
+                // 2. 获取路径
+                String path = SaHolder.getRequest().getRequestPath();
+                
+                // 3. 执行鉴权（Sa-Token 会通过 StpInterface 获取权限数据）
+                doAuth(path);
+            })
+            .setError(e -> {
+                log.warn("网关鉴权异常: {}", e.getMessage());
+                return SaTokenGatewayErrorBuilder.buildErrorJson(e);
+            });
     }
 
-    /**
-     * 判断字符串是否有内容
-     *
-     * @param str 字符串
-     * @return true=有内容
-     */
-    private boolean hasText(String str) {
-        return str != null && !str.trim().isEmpty();
-    }
-
-    /**
-     * 解析逗号分隔的字符串为列表
-     *
-     * @param str 字符串
-     * @return 列表
-     */
-    private List<String> parseList(String str) {
-        if (str == null || str.trim().isEmpty()) {
-            return List.of();
+    // ===================== 鉴权逻辑 =====================
+    private void doAuth(String path) {
+        // 动态路由优先
+        if (dynamicRouteProvider != null) {
+            DynamicAuthRoute route = dynamicRouteProvider.matchRoute(path);
+            if (route != null) {
+                checkDynamicRoute(route);
+                return;
+            }
         }
-        return Arrays.stream(str.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+
+        // 配置路由兜底
+        checkConfigRoutes(path);
+    }
+
+    private void checkDynamicRoute(DynamicAuthRoute route) {
+        // 角色校验
+        if (route.hasRoleRequirement()) {
+            boolean hasRole = route.getRequireRoles().stream().anyMatch(StpUtil::hasRole);
+            if (!hasRole) {
+                throw new NotRoleException(String.join(",", route.getRequireRoles()), StpUtil.getLoginType());
+            }
+        }
+
+        // 权限校验
+        if (route.hasPermissionRequirement()) {
+            boolean hasPermission = route.getRequirePermissions().stream().anyMatch(StpUtil::hasPermission);
+            if (!hasPermission) {
+                throw new NotPermissionException(String.join(",", route.getRequirePermissions()), StpUtil.getLoginType());
+            }
+        }
+    }
+
+    private void checkConfigRoutes(String path) {
+        if (CollectionUtils.isEmpty(properties.getAuthRoutes())) return;
+
+        for (AuthRoute route : properties.getAuthRoutes()) {
+            if (!pathMatcher.match(route.getPath(), path)) continue;
+
+            // 角色校验
+            if (hasText(route.getRequireRole())) {
+                List<String> requireRoles = parseList(route.getRequireRole());
+                boolean hasRole = requireRoles.stream().anyMatch(StpUtil::hasRole);
+                if (!hasRole) {
+                    throw new NotRoleException(route.getRequireRole(), StpUtil.getLoginType());
+                }
+            }
+
+            // 权限校验
+            if (hasText(route.getRequirePermission())) {
+                List<String> requirePerms = parseList(route.getRequirePermission());
+                boolean hasPermission = requirePerms.stream().anyMatch(StpUtil::hasPermission);
+                if (!hasPermission) {
+                    throw new NotPermissionException(route.getRequirePermission(), StpUtil.getLoginType());
+                }
+            }
+        }
+    }
+
+    private boolean hasText(String s) { return s != null && !s.isBlank(); }
+    private List<String> parseList(String s) {
+        return Arrays.stream(s.split(","))
+            .map(String::trim)
+            .filter(i -> !i.isEmpty()).toList();
     }
 }
