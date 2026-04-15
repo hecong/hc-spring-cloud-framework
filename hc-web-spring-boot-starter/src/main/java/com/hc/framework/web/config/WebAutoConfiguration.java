@@ -1,7 +1,9 @@
 package com.hc.framework.web.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hc.framework.web.exception.GlobalExceptionHandler;
 import com.hc.framework.web.serializer.ResultSerializer;
 import com.hc.framework.web.wrapper.ResponseWrapAdvice;
@@ -19,6 +21,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
+import java.util.TimeZone;
 
 /**
  * Web Starter 自动配置类
@@ -98,12 +101,22 @@ public class WebAutoConfiguration {
     private ObjectMapper createObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
 
+        // ========== 新增：注册 Java 8 时间模块 ==========
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        objectMapper.registerModule(javaTimeModule);
+
+        // ========== 新增：禁用时间戳格式 ==========
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // ========== 新增：设置时区 ==========
+        objectMapper.setTimeZone(TimeZone.getTimeZone("GMT+8"));
+
         // 注册自定义模块
         SimpleModule module = new SimpleModule();
 
         // 注册 Result 序列化器（支持动态字段名）
-        // 使用 addSerializer(JsonSerializer<?>) 让 Jackson 自动检测类型
-        module.addSerializer(new ResultSerializer(webProperties));
+        // 【修改】传入 objectMapper 到 ResultSerializer
+        module.addSerializer(new ResultSerializer(webProperties, objectMapper));
 
         // 注册 String 反序列化器（XSS 过滤）
         module.addDeserializer(String.class, new XssStringDeserializer());

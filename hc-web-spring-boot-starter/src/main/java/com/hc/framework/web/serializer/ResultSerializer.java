@@ -2,6 +2,7 @@ package com.hc.framework.web.serializer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.hc.framework.web.config.WebProperties;
 import com.hc.framework.web.model.Result;
@@ -20,9 +21,12 @@ import java.time.format.DateTimeFormatter;
 public class ResultSerializer extends JsonSerializer<Result<?>> {
 
     private final WebProperties webProperties;
+    private final ObjectMapper objectMapper;  // 新增
 
-    public ResultSerializer(WebProperties webProperties) {
+    // 修改构造器，接收 ObjectMapper
+    public ResultSerializer(WebProperties webProperties, ObjectMapper objectMapper) {
         this.webProperties = webProperties;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -48,17 +52,20 @@ public class ResultSerializer extends JsonSerializer<Result<?>> {
         // 序列化 message 字段（动态名）
         gen.writeStringField(messageField, result.getMessage());
 
-        // 序列化 data 字段（动态名）
+        // 序列化 data 字段（动态名）- 使用全局 ObjectMapper
         if (result.getData() == null) {
             gen.writeNullField(dataField);
         } else {
             gen.writeFieldName(dataField);
-            serializers.defaultSerializeValue(result.getData(), gen);
+            // 关键修改：使用注入的 objectMapper 来序列化 data
+            // 这样可以确保 LocalDateTime 等类型被正确格式化
+            String dataJson = objectMapper.writeValueAsString(result.getData());
+            gen.writeRawValue(dataJson);
         }
 
         // 序列化 timestamp 字段
         if (result.getTimestamp() != null) {
-            gen.writeStringField("timestamp", 
+            gen.writeStringField("timestamp",
                 result.getTimestamp().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
 

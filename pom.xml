@@ -18,6 +18,7 @@
         <module>hc-satoken-gateway-spring-boot-starter</module>
         <module>hc-logging-spring-boot-starter</module>
         <module>hc-oss-spring-boot-starter</module>
+        <module>hc-rocketmq-spring-boot-starter</module>
     </modules>
 
     <properties>
