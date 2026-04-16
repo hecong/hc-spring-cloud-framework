@@ -1,6 +1,7 @@
 package com.hc.framework.redis.config;
 
 import com.hc.framework.redis.core.CustomGenericJackson2JsonRedisSerializer;
+import com.hc.framework.redis.core.RedisSerializerConstants;
 import com.hc.framework.redis.lock.LockTemplate;
 import com.hc.framework.redis.util.RedisCacheUtils;
 import com.hc.framework.redis.util.RedisSequenceGenerator;
@@ -24,12 +25,6 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 @ComponentScan(basePackages = "com.hc.framework.redis.aspect")
 public class RedisAutoConfiguration {
 
-    /**
-     * 构建自定义 JSON 序列化器
-     */
-    public static RedisSerializer<?> buildRedisSerializer() {
-        return new CustomGenericJackson2JsonRedisSerializer();
-    }
 
     /**
      * RedisTemplate 配置（Key字符串，Value JSON）
@@ -44,8 +39,8 @@ public class RedisAutoConfiguration {
         template.setHashKeySerializer(RedisSerializer.string());
 
         // Value / HashValue 使用自定义 JSON 序列化
-        template.setValueSerializer(buildRedisSerializer());
-        template.setHashValueSerializer(buildRedisSerializer());
+        template.setValueSerializer(RedisSerializerConstants.REDIS_SERIALIZER);
+        template.setHashValueSerializer(RedisSerializerConstants.REDIS_SERIALIZER);
 
         // Spring 官方要求初始化
         template.afterPropertiesSet();

@@ -1,6 +1,7 @@
 package com.hc.framework.redis.config;
 
 import com.hc.framework.redis.core.CustomGenericJackson2JsonRedisSerializer;
+import com.hc.framework.redis.core.RedisSerializerConstants;
 import com.hc.framework.redis.core.TimeoutRedisCacheManager;
 import org.dromara.hutool.core.text.StrUtil;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -26,27 +27,15 @@ import java.util.Objects;
 @EnableCaching
 public class CacheAutoConfiguration {
 
-    // 全局单例序列化器
-    private static final RedisSerializer<Object> REDIS_SERIALIZER = new CustomGenericJackson2JsonRedisSerializer();
 
     @Bean
     @Primary
     public RedisCacheConfiguration redisCacheConfiguration(CacheProperties cacheProperties) {
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig();
 
-        // 自定义 Key 前缀
-        config = config.computePrefixWith(cacheName -> {
-            String keyPrefix = cacheProperties.getRedis().getKeyPrefix();
-            if (StringUtils.hasText(keyPrefix)) {
-                keyPrefix = keyPrefix.lastIndexOf(StrUtil.COLON) == -1 ? keyPrefix + StrUtil.COLON : keyPrefix;
-                return keyPrefix + cacheName + StrUtil.COLON;
-            }
-            return cacheName + StrUtil.COLON;
-        });
-
         // 使用自定义 JSON 序列化
         config = config.serializeValuesWith(
-            RedisSerializationContext.SerializationPair.fromSerializer(REDIS_SERIALIZER));
+            RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializerConstants.REDIS_SERIALIZER));
 
         // 加载配置文件
         CacheProperties.Redis redisProperties = cacheProperties.getRedis();
