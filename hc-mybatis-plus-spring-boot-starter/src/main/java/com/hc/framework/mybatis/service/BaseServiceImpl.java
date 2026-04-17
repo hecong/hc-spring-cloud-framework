@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hc.framework.mybatis.model.PageData;
 import com.hc.framework.mybatis.model.PageParam;
-import com.hc.framework.mybatis.model.PageResult;
 
 /**
  * 基础 Service 实现类
@@ -19,14 +19,14 @@ import com.hc.framework.mybatis.model.PageResult;
 public abstract class BaseServiceImpl<M extends BaseMapper<T>, T> extends ServiceImpl<M, T> implements BaseService<T> {
 
     @Override
-    public PageResult<T> pageResult(PageParam pageParam) {
+    public PageData<T> pageResult(PageParam pageParam) {
         IPage<T> page = page(pageParam.toPage());
-        return PageResult.success(page);
+        return PageData.of(page);
     }
 
     @Override
-    public PageResult<T> pageResult(PageParam pageParam, Wrapper<T> queryWrapper) {
+    public PageData<T> pageResult(PageParam pageParam, Wrapper<T> queryWrapper) {
         IPage<T> page = page(pageParam.toPage(), queryWrapper);
-        return PageResult.success(page);
+        return PageData.of(page);
     }
 }

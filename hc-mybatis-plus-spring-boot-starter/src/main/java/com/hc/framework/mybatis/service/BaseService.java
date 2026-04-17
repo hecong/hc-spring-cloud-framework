@@ -1,9 +1,8 @@
 package com.hc.framework.mybatis.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.hc.framework.mybatis.model.PageData;
 import com.hc.framework.mybatis.model.PageParam;
-import com.hc.framework.mybatis.model.PageResult;
 
 import java.util.List;
 
@@ -23,16 +22,16 @@ public interface BaseService<T> extends IService<T> {
      * @param pageParam 分页参数
      * @return PageResult 统一分页响应
      */
-    PageResult<T> pageResult(PageParam pageParam);
+    PageData<T> pageResult(PageParam pageParam);
 
     /**
      * 条件分页查询（返回统一分页结果）
      *
-     * @param pageParam 分页参数
+     * @param pageParam    分页参数
      * @param queryWrapper 查询条件
      * @return PageResult 统一分页响应
      */
-    PageResult<T> pageResult(PageParam pageParam, com.baomidou.mybatisplus.core.conditions.Wrapper<T> queryWrapper);
+    PageData<T> pageResult(PageParam pageParam, com.baomidou.mybatisplus.core.conditions.Wrapper<T> queryWrapper);
 
     /**
      * 批量插入（原生SQL，性能更高）

@@ -299,7 +299,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 ```java
 import com.hc.framework.mybatis.entity.User;
 import com.hc.framework.mybatis.model.PageParam;
-import com.hc.framework.mybatis.model.PageResult;
 import com.hc.framework.mybatis.service.UserService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -309,16 +308,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user")
 public class UserController {
 
-    private final UserService userService;
+   private final UserService userService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
+   public UserController(UserService userService) {
+      this.userService = userService;
+   }
 
-    @GetMapping("/page")
-    public PageResult<User> page(PageParam pageParam) {
-        return userService.pageResult(pageParam);
-    }
+   @GetMapping("/page")
+   public PageResult<User> page(PageParam pageParam) {
+      return userService.pageResult(pageParam);
+   }
 }
 ```
 
@@ -633,7 +632,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc.framework.mybatis.entity.User;
 import com.hc.framework.mybatis.model.PageParam;
-import com.hc.framework.mybatis.model.PageResult;
 import com.hc.framework.mybatis.service.BaseServiceImpl;
 import com.hc.framework.mybatis.mapper.UserMapper;
 import org.springframework.stereotype.Service;
@@ -641,28 +639,28 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> {
 
-    /**
-     * 自定义条件分页查询
-     */
-    public PageResult<User> pageByCondition(PageParam pageParam, String username, Integer status) {
-        // 构建查询条件
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        if (username != null && !username.isEmpty()) {
-            wrapper.like(User::getUsername, username);
-        }
-        if (status != null) {
-            wrapper.eq(User::getStatus, status);
-        }
-        
-        // 构建分页参数
-        IPage<User> page = new Page<>(pageParam.getPage(), pageParam.getSize());
-        
-        // 执行分页查询
-        page = baseMapper.selectPage(page, wrapper);
-        
-        // 构建分页结果
-        return PageResult.build(page);
-    }
+   /**
+    * 自定义条件分页查询
+    */
+   public PageResult<User> pageByCondition(PageParam pageParam, String username, Integer status) {
+      // 构建查询条件
+      LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+      if (username != null && !username.isEmpty()) {
+         wrapper.like(User::getUsername, username);
+      }
+      if (status != null) {
+         wrapper.eq(User::getStatus, status);
+      }
+
+      // 构建分页参数
+      IPage<User> page = new Page<>(pageParam.getPage(), pageParam.getSize());
+
+      // 执行分页查询
+      page = baseMapper.selectPage(page, wrapper);
+
+      // 构建分页结果
+      return PageResult.build(page);
+   }
 }
 ```
 
