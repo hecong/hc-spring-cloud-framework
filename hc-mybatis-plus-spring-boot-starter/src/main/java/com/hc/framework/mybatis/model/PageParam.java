@@ -3,6 +3,7 @@ package com.hc.framework.mybatis.model;
 import com.hc.framework.common.constant.SystemConstants;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serial;
@@ -24,12 +25,14 @@ public class PageParam implements Serializable {
     /**
      * 当前页码（从1开始）
      */
+    @NotNull(message = "页码不能为空")
     @Min(value = 1, message = "页码必须大于等于1")
     private Integer pageNum = SystemConstants.DEFAULT_PAGE_NUM;
 
     /**
      * 每页条数
      */
+    @NotNull(message = "每页条数不能为空")
     @Min(value = 1, message = "每页条数必须大于等于1")
     @Max(value = 1000, message = "每页条数不能超过1000")
     private Integer pageSize = SystemConstants.DEFAULT_PAGE_SIZE;
