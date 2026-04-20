@@ -45,7 +45,6 @@
         <dependency>
             <groupId>org.dromara.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>6.0.0-M10</version>
         </dependency>
         <!-- Spring Boot Test -->
         <dependency>

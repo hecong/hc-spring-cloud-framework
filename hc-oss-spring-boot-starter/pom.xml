@@ -43,7 +43,6 @@
         <dependency>
             <groupId>com.qcloud</groupId>
             <artifactId>cos_api</artifactId>
-            <version>5.6.213</version>
         </dependency>
         <!-- Lombok -->
         <dependency>
@@ -58,11 +57,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.hnhegui.framework</groupId>
-            <artifactId>hc-mybatis-plus-spring-boot-starter</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
     </dependencies>
 
 </project>

@@ -50,6 +50,12 @@
         <aliyun-oss.version>3.17.4</aliyun-oss.version>
         <minio.version>8.5.10</minio.version>
         <owasp.version>1.4.0</owasp.version>
+        <rocketmq.version>2.3.4</rocketmq.version>
+        <cos.version>5.6.213</cos.version>
+        <baomidou.dynamic-datasource.version>4.3.1</baomidou.dynamic-datasource.version>
+        <druid.version>1.2.22</druid.version>
+        <mybatis-plus-generator.version>3.5.5</mybatis-plus-generator.version>
+        <freemarker.version>2.3.32</freemarker.version>
     </properties>
 
     <dependencyManagement>
@@ -126,29 +132,6 @@
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
-<!--            &lt;!&ndash; Sa-Token &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>cn.dev33</groupId>-->
-<!--                <artifactId>sa-token-spring-boot3-starter</artifactId>-->
-<!--                <version>${satoken.version}</version>-->
-<!--            </dependency>-->
-<!--            &lt;!&ndash; Sa-Token Reactor（网关专用） &ndash;&gt;-->
-<!--            <dependency>-->
-<!--                <groupId>cn.dev33</groupId>-->
-<!--                <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>-->
-<!--                <version>${satoken.version}</version>-->
-<!--            </dependency>-->
-<!--            <dependency>-->
-<!--                <groupId>cn.dev33</groupId>-->
-<!--                <artifactId>sa-token-redis-jackson</artifactId>-->
-<!--                <version>${satoken.version}</version>-->
-<!--            </dependency>-->
-
-<!--            <dependency>-->
-<!--                <groupId>cn.dev33</groupId>-->
-<!--                <artifactId>sa-token-redis-template</artifactId>-->
-<!--                <version>${satoken.redis.version}</version>-->
-<!--            </dependency>-->
             <!-- Sentinel -->
             <dependency>
                 <groupId>com.alibaba.csp</groupId>
@@ -167,6 +150,11 @@
                 <version>${aliyun-oss.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.qcloud</groupId>
+                <artifactId>cos_api</artifactId>
+                <version>${cos.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.minio</groupId>
                 <artifactId>minio</artifactId>
                 <version>${minio.version}</version>
@@ -179,6 +167,41 @@
                 <artifactId>encoder</artifactId>
                 <version>${owasp.version}</version>
             </dependency>
+
+            <!-- RocketMQ 5.x gRPC 官方 starter -->
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-v5-client-spring-boot-starter</artifactId>
+                <version>${rocketmq.version}</version>
+            </dependency>
+
+            <!-- Dynamic Datasource -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>dynamic-datasource-spring-boot3-starter</artifactId>
+                <version>${baomidou.dynamic-datasource.version}</version>
+            </dependency>
+
+            <!-- Druid -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-3-starter</artifactId>
+                <version>${druid.version}</version>
+            </dependency>
+
+            <!-- MyBatis-Plus 代码生成器 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-generator</artifactId>
+                <version>${mybatis-plus-generator.version}</version>
+            </dependency>
+            <!-- Freemarker 模板引擎 -->
+            <dependency>
+                <groupId>org.freemarker</groupId>
+                <artifactId>freemarker</artifactId>
+                <version>${freemarker.version}</version>
+            </dependency>
+
 
             <!-- 自定义模块管理 -->
             <dependency>

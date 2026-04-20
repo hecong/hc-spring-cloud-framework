@@ -15,7 +15,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <rocketmq.version>2.3.4</rocketmq.version>
+
     </properties>
 
     <dependencies>
@@ -40,7 +40,6 @@
         <dependency>
             <groupId>org.apache.rocketmq</groupId>
             <artifactId>rocketmq-v5-client-spring-boot-starter</artifactId>
-            <version>${rocketmq.version}</version>
         </dependency>
 
         <!-- 自定义 Redis Starter（可选，用于幂等） -->
