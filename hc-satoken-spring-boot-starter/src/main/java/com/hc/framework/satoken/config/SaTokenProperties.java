@@ -238,9 +238,10 @@ public class SaTokenProperties {
 
         /**
          * JWT 密钥
-         * <p>建议使用 32 位以上的随机字符串</p>
+         * <p>必须配置，否则启动时校验失败。建议使用 32 位以上的随机字符串。</p>
+         * <p>禁止使用默认值或空值，否则应用将无法启动。</p>
          */
-        private String secret = "hc-satoken-default-secret-key";
+        private String secret = null;
 
         /**
          * JWT 有效期（秒）
@@ -317,6 +318,13 @@ public class SaTokenProperties {
          * SSO 接口调用密钥
          */
         private String secret = "";
+
+        /**
+         * 允许的重定向域名白名单
+         * <p>为空时仅允许相对路径跳转（以 / 开头），禁止跳转到外部域名。</p>
+         * <p>配置示例：app.example.com,admin.example.com</p>
+         */
+        private List<String> allowedRedirectDomains = new ArrayList<>();
     }
 
     // ==================== 权限配置 ====================

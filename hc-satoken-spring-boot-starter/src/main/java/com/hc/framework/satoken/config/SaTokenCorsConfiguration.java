@@ -78,8 +78,17 @@ public class SaTokenCorsConfiguration {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        // 允许的来源
+        // 安全校验：禁止 credentials=true 与通配符 origin 组合
+        boolean allowCredentials = Boolean.TRUE.equals(frontendConfig.getCorsAllowCredentials());
         String allowedOrigins = frontendConfig.getCorsAllowedOrigins();
+
+        if (allowCredentials && "*".equals(allowedOrigins)) {
+            throw new IllegalStateException(
+                    "CORS 安全配置错误：cors-allow-credentials=true 时不允许 cors-allowed-origins='*'，"
+                    + "请显式列出允许的域名（如：https://app.example.com,https://admin.example.com）");
+        }
+
+        // 允许的来源
         if ("*".equals(allowedOrigins)) {
             config.addAllowedOriginPattern("*");
         } else {

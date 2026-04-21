@@ -96,6 +96,29 @@ public class SaTokenAutoConfiguration {
      */
     public SaTokenAutoConfiguration(SaTokenProperties saTokenProperties) {
         this.saTokenProperties = saTokenProperties;
+        validateJwtSecret(saTokenProperties);
+    }
+
+    /**
+     * JWT 密钥启动校验
+     *
+     * <p>当 JWT 模式启用时，必须显式配置一个非空、非默认值的密钥，
+     * 否则应用将无法启动，防止使用弱密钥导致 Token 伪造。</p>
+     */
+    private void validateJwtSecret(SaTokenProperties props) {
+        if (!props.isJwtEnabled()) {
+            return;
+        }
+        String secret = props.getJwt().getSecret();
+        if (secret == null || secret.isEmpty()) {
+            throw new IllegalStateException(
+                    "Sa-Token JWT 已启用，但未配置密钥！请在配置文件中设置 hc.satoken.jwt.secret");
+        }
+        if (secret.length() < 32) {
+            throw new IllegalStateException(
+                    "Sa-Token JWT 密钥长度不足！当前 " + secret.length()
+                    + " 字符，要求至少 32 字符。请更换为更强的密钥。");
+        }
     }
 
     // ==================== Token 存储与清理 ====================

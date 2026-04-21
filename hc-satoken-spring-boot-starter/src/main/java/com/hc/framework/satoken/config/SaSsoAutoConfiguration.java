@@ -9,6 +9,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+
 /**
  * Sa-Token SSO 单点登录自动配置类
  *
@@ -165,9 +169,63 @@ public class SaSsoAutoConfiguration {
             }
             url.append(path);
             if (redirectUrl != null && !redirectUrl.isEmpty()) {
-                url.append("?redirect=").append(redirectUrl);
+                if (!isRedirectUrlAllowed(redirectUrl)) {
+                    log.warn("SSO 重定向 URL 被拒绝（不在白名单中且非相对路径）: {}", redirectUrl);
+                    return url.toString();
+                }
+                url.append("?redirect=").append(encodeRedirectUrl(redirectUrl));
             }
             return url.toString();
+        }
+
+        /**
+         * 校验重定向 URL 是否安全
+         *
+         * <p>允许的规则：</p>
+         * <ul>
+         *   <li>相对路径（以 / 开头）始终允许</li>
+         *   <li>绝对 URL 的域名必须在 allowedRedirectDomains 白名单中</li>
+         *   <li>协议仅允许 http/https</li>
+         * </ul>
+         */
+        private boolean isRedirectUrlAllowed(String redirectUrl) {
+            String trimmed = redirectUrl.trim();
+
+            // 相对路径始终允许
+            if (trimmed.startsWith("/")) {
+                return true;
+            }
+
+            // 解析绝对 URL
+            try {
+                URI uri = new URI(trimmed);
+                String scheme = uri.getScheme();
+                if (scheme == null || (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme))) {
+                    return false;
+                }
+                String host = uri.getHost();
+                if (host == null) {
+                    return false;
+                }
+                // 检查域名白名单
+                List<String> allowedDomains = config.getAllowedRedirectDomains();
+                if (allowedDomains == null || allowedDomains.isEmpty()) {
+                    log.warn("SSO 重定向域名为绝对 URL 但未配置白名单 (hc.satoken.sso.allowed-redirect-domains)，已拒绝: {}", trimmed);
+                    return false;
+                }
+                return allowedDomains.stream()
+                        .anyMatch(allowed -> host.equalsIgnoreCase(allowed.trim()));
+            } catch (URISyntaxException e) {
+                log.warn("SSO 重定向 URL 格式无效: {}", trimmed);
+                return false;
+            }
+        }
+
+        /**
+         * 对重定向 URL 进行编码，防止 HTTP 响应头注入
+         */
+        private String encodeRedirectUrl(String redirectUrl) {
+            return redirectUrl.replace("\r", "").replace("\n", "");
         }
     }
 }

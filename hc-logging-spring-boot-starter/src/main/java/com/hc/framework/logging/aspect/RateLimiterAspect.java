@@ -23,7 +23,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 接口限流切面
@@ -133,9 +134,11 @@ public class RateLimiterAspect {
                 break;
         }
 
-        // 规则注册（避免重复）
+        // 规则注册（追加方式，避免覆盖已有规则）
         if (FlowRuleManager.getRules().stream().noneMatch(r -> r.getResource().equals(resourceName))) {
-            FlowRuleManager.loadRules(Collections.singletonList(rule));
+            List<FlowRule> existingRules = new ArrayList<>(FlowRuleManager.getRules());
+            existingRules.add(rule);
+            FlowRuleManager.loadRules(existingRules);
         }
     }
 
