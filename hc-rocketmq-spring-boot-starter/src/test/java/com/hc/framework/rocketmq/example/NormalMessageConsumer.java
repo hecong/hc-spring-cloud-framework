@@ -2,13 +2,8 @@ package com.hc.framework.rocketmq.example;
 
 import com.hc.framework.common.util.JsonUtils;
 import com.hc.framework.rocketmq.core.BaseMqConsumer;
-import com.hc.framework.rocketmq.core.BaseMqMessage;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.client.apis.consumer.ConsumeResult;
-import org.apache.rocketmq.client.apis.message.MessageView;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
 
 /**
  * 普通消息消费者示例

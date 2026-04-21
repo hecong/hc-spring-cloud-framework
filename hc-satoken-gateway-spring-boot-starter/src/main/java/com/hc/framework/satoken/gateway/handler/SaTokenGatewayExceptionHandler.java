@@ -1,7 +1,6 @@
 package com.hc.framework.satoken.gateway.handler;
 
-import cn.dev33.satoken.exception.*;
-import com.hc.framework.satoken.gateway.model.Result;
+import cn.dev33.satoken.exception.SaTokenException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;

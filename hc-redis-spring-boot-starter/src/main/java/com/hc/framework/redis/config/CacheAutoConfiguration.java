@@ -1,9 +1,7 @@
 package com.hc.framework.redis.config;
 
-import com.hc.framework.redis.core.CustomGenericJackson2JsonRedisSerializer;
 import com.hc.framework.redis.core.RedisSerializerConstants;
 import com.hc.framework.redis.core.TimeoutRedisCacheManager;
-import org.dromara.hutool.core.text.StrUtil;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -17,8 +15,6 @@ import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.util.StringUtils;
 
 import java.util.Objects;
 

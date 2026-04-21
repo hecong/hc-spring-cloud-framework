@@ -1,6 +1,10 @@
 package com.hc.framework.satoken.gateway.handler;
 
-import cn.dev33.satoken.exception.*;
+import cn.dev33.satoken.exception.DisableServiceException;
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
+import cn.dev33.satoken.exception.NotSafeException;
 
 /**
  * Sa-Token 网关错误响应构建器

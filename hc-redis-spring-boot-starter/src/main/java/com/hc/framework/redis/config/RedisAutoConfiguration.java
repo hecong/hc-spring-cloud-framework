@@ -1,6 +1,5 @@
 package com.hc.framework.redis.config;
 
-import com.hc.framework.redis.core.CustomGenericJackson2JsonRedisSerializer;
 import com.hc.framework.redis.core.RedisSerializerConstants;
 import com.hc.framework.redis.lock.LockTemplate;
 import com.hc.framework.redis.util.RedisCacheUtils;
