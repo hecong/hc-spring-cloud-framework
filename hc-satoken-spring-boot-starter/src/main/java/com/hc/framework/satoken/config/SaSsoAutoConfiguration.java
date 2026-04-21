@@ -200,7 +200,7 @@ public class SaSsoAutoConfiguration {
             try {
                 URI uri = new URI(trimmed);
                 String scheme = uri.getScheme();
-                if (scheme == null || (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme))) {
+                if ((!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme))) {
                     return false;
                 }
                 String host = uri.getHost();

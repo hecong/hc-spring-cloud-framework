@@ -75,7 +75,7 @@ public class TencentCosServiceImpl implements OssService {
     /**
      * 从域名中提取主机部分
      *
-     * @param domain 完整域名（如：https://cdn.example.com）
+     * @param domain 完整域名（如：<a href="https://cdn.example.com">...</a>）
      * @return 主机部分（如：cdn.example.com）
      */
     private String extractHost(String domain) {
