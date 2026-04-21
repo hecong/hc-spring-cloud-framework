@@ -55,6 +55,13 @@
             <artifactId>hc-common-spring-boot-starter</artifactId>
         </dependency>
 
+        <!-- 自定义 Logging Starter（TraceIdUtils，可选） -->
+        <dependency>
+            <groupId>com.hnhegui.framework</groupId>
+            <artifactId>hc-logging-spring-boot-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Hutool -->
         <dependency>
             <groupId>org.dromara.hutool</groupId>

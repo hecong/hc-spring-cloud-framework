@@ -11,6 +11,7 @@ import com.qcloud.cos.http.HttpMethodName;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
@@ -40,6 +41,14 @@ public class TencentCosServiceImpl implements OssService {
         this.config = config;
         this.cosClient = createCosClient(config);
         log.info("腾讯云COS客户端初始化完成，region={}", config.getRegion());
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (cosClient != null) {
+            cosClient.shutdown();
+            log.info("腾讯云COS客户端已关闭");
+        }
     }
 
     /**

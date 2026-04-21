@@ -1,13 +1,12 @@
 package com.hc.framework.rocketmq.util;
 
+import com.hc.framework.logging.util.TraceIdUtils;
 import org.slf4j.MDC;
-
-import java.util.UUID;
 
 /**
  * MDC（Mapped Diagnostic Context）工具类
  *
- * <p>用于链路追踪，在日志中统一输出 traceId。</p>
+ * <p>委托到 {@link TraceIdUtils}，保持全链路 traceId 格式统一。</p>
  *
  * @author hc-framework
  */
@@ -16,7 +15,7 @@ public class MdcUtils {
     /**
      * MDC 中 traceId 的 key
      */
-    public static final String TRACE_ID_KEY = "traceId";
+    public static final String TRACE_ID_KEY = TraceIdUtils.TRACE_ID_KEY;
 
     private MdcUtils() {
     }
@@ -27,7 +26,7 @@ public class MdcUtils {
      * @return traceId，不存在则返回 null
      */
     public static String getTraceId() {
-        return MDC.get(TRACE_ID_KEY);
+        return TraceIdUtils.getTraceId();
     }
 
     /**
@@ -36,7 +35,7 @@ public class MdcUtils {
      * @param traceId 链路追踪 ID
      */
     public static void setTraceId(String traceId) {
-        MDC.put(TRACE_ID_KEY, traceId);
+        TraceIdUtils.setTraceId(traceId);
     }
 
     /**
@@ -45,8 +44,8 @@ public class MdcUtils {
      * @return 新生成的 traceId
      */
     public static String generateAndSetTraceId() {
-        String traceId = generateTraceId();
-        setTraceId(traceId);
+        String traceId = TraceIdUtils.generateTraceId();
+        TraceIdUtils.setTraceId(traceId);
         return traceId;
     }
 
@@ -56,14 +55,14 @@ public class MdcUtils {
      * @return 新生成的 traceId
      */
     public static String generateTraceId() {
-        return UUID.randomUUID().toString().replace("-", "");
+        return TraceIdUtils.generateTraceId();
     }
 
     /**
      * 清除当前线程的 traceId
      */
     public static void remove() {
-        MDC.remove(TRACE_ID_KEY);
+        TraceIdUtils.removeTraceId();
     }
 
     /**

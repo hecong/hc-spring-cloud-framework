@@ -249,6 +249,11 @@
                 <artifactId>hc-oss-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.hnhegui.framework</groupId>
+                <artifactId>hc-rocketmq-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

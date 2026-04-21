@@ -8,6 +8,7 @@ import io.minio.RemoveObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.http.Method;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
@@ -33,6 +34,14 @@ public class MinioOssServiceImpl implements OssService {
                 .credentials(config.getAccessKey(), config.getSecretKey())
                 .build();
         log.info("MinIO客户端初始化完成");
+    }
+
+    @PreDestroy
+    public void destroy() throws Exception {
+        if (minioClient != null) {
+            minioClient.close();
+            log.info("MinIO客户端已关闭");
+        }
     }
 
     @Override
