@@ -18,9 +18,9 @@ import java.util.concurrent.TimeUnit;
 public class LockTemplate {
 
     /**
-     * 默认等待时间（秒），-1表示无限等待
+     * 默认等待时间（秒），30秒超时避免线程无限阻塞
      */
-    private static final int DEFAULT_WAIT_TIME = -1;
+    private static final int DEFAULT_WAIT_TIME = 30;
     
     /**
      * 默认租约时间（秒），-1表示自动续期

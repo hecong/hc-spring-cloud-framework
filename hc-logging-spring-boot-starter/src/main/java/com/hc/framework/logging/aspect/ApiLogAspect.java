@@ -64,7 +64,7 @@ public class ApiLogAspect {
 
         // 记录请求参数
         Object[] args = point.getArgs();
-        String params = JSONUtil.toJsonStr(args);
+        String params = sanitize(JSONUtil.toJsonStr(args));
 
         Instant start = Instant.now();
         // 统一请求日志格式：[级别][TraceId][类型] 内容
@@ -74,7 +74,7 @@ public class ApiLogAspect {
         try {
             Object result = point.proceed();
             long cost = Duration.between(start, Instant.now()).toMillis();
-            String resultStr = result != null ? JSONUtil.toJsonStr(result) : "null";
+            String resultStr = result != null ? sanitize(JSONUtil.toJsonStr(result)) : "null";
             // 截断过长的响应结果
             if (resultStr.length() > 500) {
                 resultStr = resultStr.substring(0, 500) + "...";
@@ -90,5 +90,25 @@ public class ApiLogAspect {
         }
     }
 
+    /**
+     * 脱敏处理：将敏感参数名对应的值替换为 ***
+     */
+    private String sanitize(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+        List<String> sensitiveNames = loggingProperties.getSensitiveParamNames();
+        if (sensitiveNames == null || sensitiveNames.isEmpty()) {
+            return json;
+        }
+        String result = json;
+        for (String name : sensitiveNames) {
+            // 匹配 "name":"value" 或 "name": "value" 模式（忽略大小写）
+            result = result.replaceAll(
+                    "(?i)(\"" + Pattern.quote(name) + "\"\\s*:\\s*)\"[^\"]*\"",
+                    "$1\"***\"");
+        }
+        return result;
+    }
 
 }

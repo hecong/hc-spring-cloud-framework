@@ -1,9 +1,7 @@
 package com.hc.framework.web.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hc.framework.web.exception.GlobalExceptionHandler;
 import com.hc.framework.web.serializer.ResultSerializer;
 import com.hc.framework.web.wrapper.ResponseWrapAdvice;
@@ -21,7 +19,6 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
-import java.util.TimeZone;
 
 /**
  * Web Starter 自动配置类
@@ -75,19 +72,21 @@ public class WebAutoConfiguration {
     /**
      * Jackson 消息转换器配置
      *
-     * <p>配置 Jackson 的自定义序列化器和反序列化器，支持动态字段名和 XSS 过滤。</p>
+     * <p>复用 Spring 容器中的 ObjectMapper，在其基础上注册自定义模块，
+     * 避免覆盖用户的 spring.jackson.* 配置。</p>
      */
     @Bean
-    public WebMvcConfigurer jacksonConfigurer() {
+    public WebMvcConfigurer jacksonConfigurer(ObjectMapper objectMapper) {
         return new WebMvcConfigurer() {
             @Override
-            public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-                // 创建自定义 ObjectMapper
-                ObjectMapper objectMapper = createObjectMapper();
+            public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+                // 注册自定义模块到已有 ObjectMapper（保留 spring.jackson.* 配置）
+                ObjectMapper customized = objectMapper.copy();
+                customizeObjectMapper(customized);
 
                 // 创建 Jackson 消息转换器
                 MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-                converter.setObjectMapper(objectMapper);
+                converter.setObjectMapper(customized);
 
                 // 插入到列表头部，优先使用
                 converters.add(0, converter);
@@ -96,34 +95,19 @@ public class WebAutoConfiguration {
     }
 
     /**
-     * 创建并配置 ObjectMapper
+     * 在已有 ObjectMapper 基础上注册自定义模块
      */
-    private ObjectMapper createObjectMapper() {
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        // ========== 新增：注册 Java 8 时间模块 ==========
-        JavaTimeModule javaTimeModule = new JavaTimeModule();
-        objectMapper.registerModule(javaTimeModule);
-
-        // ========== 新增：禁用时间戳格式 ==========
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        // ========== 新增：设置时区 ==========
-        objectMapper.setTimeZone(TimeZone.getTimeZone("GMT+8"));
-
+    private void customizeObjectMapper(ObjectMapper objectMapper) {
         // 注册自定义模块
         SimpleModule module = new SimpleModule();
 
         // 注册 Result 序列化器（支持动态字段名）
-        // 【修改】传入 objectMapper 到 ResultSerializer
         module.addSerializer(new ResultSerializer(webProperties, objectMapper));
 
         // 注册 String 反序列化器（XSS 过滤）
         module.addDeserializer(String.class, new XssStringDeserializer());
 
         objectMapper.registerModule(module);
-
-        return objectMapper;
     }
 
     /**

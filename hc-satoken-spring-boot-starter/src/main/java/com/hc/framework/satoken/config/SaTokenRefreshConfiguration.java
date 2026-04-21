@@ -55,9 +55,11 @@ public class SaTokenRefreshConfiguration {
     private final SaTokenProperties saTokenProperties;
 
     /**
-     * 密码编码器（支持动态刷新）
+     * 密码编码器持有者（仅读取当前算法，不再运行时切换）
      *
-     * <p>当配置中心的密码算法变更时，自动切换编码算法。</p>
+     * <p>密码算法变更需重启服务，不支持运行时动态切换。
+     * 运行时切换会导致并发期间部分线程使用新算法、部分使用旧算法，
+     * 且切到弱算法（如 MD5）会使全量密码验证失效。</p>
      */
     @Bean
     @RefreshScope
@@ -65,8 +67,11 @@ public class SaTokenRefreshConfiguration {
     public SaPasswordEncoderHolder saPasswordEncoderHolder() {
         String algorithm = saTokenProperties.getPassword().getAlgorithm();
         SaPasswordEncoder.PasswordAlgorithm passwordAlgorithm = parseAlgorithm(algorithm);
-        SaPasswordEncoder.setDefaultAlgorithm(passwordAlgorithm);
         log.info("Sa-Token 密码编码器已初始化（动态刷新支持），算法: {}", passwordAlgorithm);
+        if (passwordAlgorithm != SaPasswordEncoder.PasswordAlgorithm.BCRYPT) {
+            log.warn("当前密码算法为 {}，不推荐用于生产环境。如需切换算法请重启服务，避免运行时切换导致验证异常。",
+                    passwordAlgorithm);
+        }
         return new SaPasswordEncoderHolder(passwordAlgorithm);
     }
 

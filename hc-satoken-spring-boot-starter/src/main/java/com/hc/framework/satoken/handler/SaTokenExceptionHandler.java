@@ -82,7 +82,7 @@ public class SaTokenExceptionHandler {
         // 记录权限校验失败日志
         authLogger.logPermissionDenied(getCurrentUserId(), e.getPermission());
 
-        return Result.error(HttpStatus.FORBIDDEN.value(), "无操作权限: " + e.getPermission());
+        return Result.error(HttpStatus.FORBIDDEN.value(), "权限不足");
     }
 
     /**
@@ -96,7 +96,7 @@ public class SaTokenExceptionHandler {
         // 记录角色校验失败日志
         authLogger.logRoleDenied(getCurrentUserId(), e.getRole());
 
-        return Result.error(HttpStatus.FORBIDDEN.value(), "无访问权限，需要角色: " + e.getRole());
+        return Result.error(HttpStatus.FORBIDDEN.value(), "角色权限不足");
     }
 
     /**
@@ -131,7 +131,7 @@ public class SaTokenExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleSaTokenException(SaTokenException e) {
         log.error("Sa-Token 认证异常: {}", e.getMessage(), e);
-        return Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "认证服务异常: " + e.getMessage());
+        return Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "认证服务异常");
     }
 
     /**

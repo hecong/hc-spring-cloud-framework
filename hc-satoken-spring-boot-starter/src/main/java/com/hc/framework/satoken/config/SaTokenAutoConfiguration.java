@@ -3,6 +3,7 @@ package com.hc.framework.satoken.config;
 import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.stp.StpInterface;
 import com.hc.framework.redis.util.RedisCacheUtils;
+import lombok.extern.slf4j.Slf4j;
 import com.hc.framework.satoken.handler.SaPermissionProvider;
 import com.hc.framework.satoken.handler.SaTokenAuthLogger;
 import com.hc.framework.satoken.handler.SaTokenExceptionHandler;
@@ -82,6 +83,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @author hc-framework
  * @since 1.0.0
  */
+@Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(SaTokenProperties.class)
 @EnableScheduling
@@ -97,6 +99,7 @@ public class SaTokenAutoConfiguration {
     public SaTokenAutoConfiguration(SaTokenProperties saTokenProperties) {
         this.saTokenProperties = saTokenProperties;
         validateJwtSecret(saTokenProperties);
+        warnCookieSecure(saTokenProperties);
     }
 
     /**
@@ -118,6 +121,19 @@ public class SaTokenAutoConfiguration {
             throw new IllegalStateException(
                     "Sa-Token JWT 密钥长度不足！当前 " + secret.length()
                     + " 字符，要求至少 32 字符。请更换为更强的密钥。");
+        }
+    }
+
+    /**
+     * Cookie 安全提示
+     *
+     * <p>当 Cookie 读取启用但 Secure 标志为 false 时，HTTP 下 Session 可能被劫持。</p>
+     */
+    private void warnCookieSecure(SaTokenProperties props) {
+        if (Boolean.TRUE.equals(props.getToken().getIsReadCookie())
+                && !Boolean.TRUE.equals(props.getCookie().getIsSecure())) {
+            log.warn("Sa-Token Cookie 安全提示：isReadCookie=true 但 isSecure=false，"
+                    + "HTTP 下 Cookie 可能被中间人窃取。生产环境建议设置 hc.satoken.cookie.is-secure=true");
         }
     }
 

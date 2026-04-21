@@ -29,6 +29,14 @@ public class LoggingProperties {
     private List<String> ignorePaths = new ArrayList<>();
 
     /**
+     * 敏感参数名列表（匹配时忽略大小写，值将被替换为 ***）
+     */
+    private List<String> sensitiveParamNames = List.of(
+            "password", "secret", "token", "idCard", "accessToken", "refreshToken",
+            "creditCard", "cvv", "privateKey"
+    );
+
+    /**
      * 限流配置
      */
     private RateLimitConfig rateLimit = new RateLimitConfig();

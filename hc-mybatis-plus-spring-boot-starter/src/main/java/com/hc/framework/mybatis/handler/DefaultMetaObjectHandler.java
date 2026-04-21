@@ -20,7 +20,7 @@ public class DefaultMetaObjectHandler implements MetaObjectHandler {
     /**
      * 当前用户ID提供者
      */
-    private static Supplier<String> currentUserIdSupplier = () -> null;
+    private static volatile Supplier<String> currentUserIdSupplier = () -> null;
 
     /**
      * 注册当前用户ID提供者

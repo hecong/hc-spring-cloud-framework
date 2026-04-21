@@ -202,7 +202,11 @@ public class SaTokenParser {
      */
     private String getTokenFromParameter(HttpServletRequest request, String tokenName) {
         String token = request.getParameter(tokenName);
-        return token != null && !token.isEmpty() ? token : null;
+        if (token != null && !token.isEmpty()) {
+            log.debug("从 URL 参数读取到 Token，注意：Token 可能泄露到日志/Referer/浏览器历史中");
+            return token;
+        }
+        return null;
     }
 
     /**

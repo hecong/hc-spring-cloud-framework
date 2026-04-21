@@ -166,7 +166,7 @@ public class DateUtils {
      * @return 计算结果
      */
     public static LocalDateTime addDays(LocalDateTime dateTime, long days) {
-        return dateTime.plusDays(days);
+        return dateTime != null ? dateTime.plusDays(days) : null;
     }
 
     /**
@@ -177,7 +177,7 @@ public class DateUtils {
      * @return 计算结果
      */
     public static LocalDateTime addHours(LocalDateTime dateTime, long hours) {
-        return dateTime.plusHours(hours);
+        return dateTime != null ? dateTime.plusHours(hours) : null;
     }
 
     /**
@@ -188,7 +188,7 @@ public class DateUtils {
      * @return 计算结果
      */
     public static LocalDateTime addMinutes(LocalDateTime dateTime, long minutes) {
-        return dateTime.plusMinutes(minutes);
+        return dateTime != null ? dateTime.plusMinutes(minutes) : null;
     }
 
     /**
@@ -199,7 +199,7 @@ public class DateUtils {
      * @return 计算结果
      */
     public static LocalDateTime addMonths(LocalDateTime dateTime, long months) {
-        return dateTime.plusMonths(months);
+        return dateTime != null ? dateTime.plusMonths(months) : null;
     }
 
     /**
@@ -210,6 +210,9 @@ public class DateUtils {
      * @return 相差天数，end 早于 start 时为负数
      */
     public static long betweenDays(LocalDate start, LocalDate end) {
+        if (start == null || end == null) {
+            return 0;
+        }
         return ChronoUnit.DAYS.between(start, end);
     }
 
@@ -221,6 +224,9 @@ public class DateUtils {
      * @return 相差秒数
      */
     public static long betweenSeconds(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null) {
+            return 0;
+        }
         return ChronoUnit.SECONDS.between(start, end);
     }
 
@@ -291,6 +297,9 @@ public class DateUtils {
      * @return 毫秒时间戳
      */
     public static long toTimestamp(LocalDateTime dateTime) {
+        if (dateTime == null) {
+            return 0;
+        }
         return dateTime.atZone(DEFAULT_ZONE).toInstant().toEpochMilli();
     }
 }

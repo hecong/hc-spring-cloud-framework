@@ -69,10 +69,10 @@ public class SaTokenGatewayErrorBuilder {
             return getNotLoginMessage((NotLoginException) e);
         }
         if (e instanceof NotPermissionException npe) {
-            return "无操作权限: " + npe.getPermission();
+            return "权限不足";
         }
         if (e instanceof NotRoleException nre) {
-            return "无访问权限，需要角色: " + nre.getRole();
+            return "角色权限不足";
         }
         if (e instanceof DisableServiceException) {
             return "账号已被封禁，请联系管理员";
@@ -80,7 +80,7 @@ public class SaTokenGatewayErrorBuilder {
         if (e instanceof NotSafeException) {
             return "需要二次认证，请先完成安全验证";
         }
-        return "认证服务异常: " + e.getMessage();
+        return "认证服务异常";
     }
 
     /**

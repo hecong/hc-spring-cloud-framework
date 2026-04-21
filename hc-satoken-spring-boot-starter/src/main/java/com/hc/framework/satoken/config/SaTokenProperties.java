@@ -486,9 +486,10 @@ public class SaTokenProperties {
         /**
          * Token 读取优先级
          * <p>可选值：HEADER、PARAMETER、COOKIE，多个用逗号分隔，按优先级排序</p>
-         * <p>默认：HEADER,PARAMETER,COOKIE</p>
+         * <p>默认：HEADER,COOKIE（不包含 PARAMETER，因 URL 参数中的 Token 会泄露到日志/Referer/浏览器历史）</p>
+         * <p>如需从 URL 参数读取（如 WebSocket 场景），可配置为 HEADER,PARAMETER,COOKIE，但建议使用短时效 Token</p>
          */
-        private String tokenReadOrder = "HEADER,PARAMETER,COOKIE";
+        private String tokenReadOrder = "HEADER,COOKIE";
 
         /**
          * 是否自动将 Token 加入跨域允许头

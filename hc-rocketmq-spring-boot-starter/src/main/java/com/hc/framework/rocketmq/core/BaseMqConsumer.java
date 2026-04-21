@@ -9,6 +9,7 @@ import org.apache.rocketmq.client.apis.message.MessageView;
 import org.apache.rocketmq.client.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -51,7 +52,7 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
      */
     @Override
     public ConsumeResult consume(MessageView messageView) {
-        String body = new String(messageView.getBody().array(), StandardCharsets.UTF_8);
+        String body = parseMessageBody(messageView.getBody());
         BaseMqMessage baseMsg;
 
         try {
@@ -134,5 +135,17 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
      * @param data 业务数据
      */
     protected abstract void doConsume(T data);
+
+    /**
+     * 安全地解析消息体 ByteBuffer 为字符串
+     */
+    private String parseMessageBody(ByteBuffer buffer) {
+        if (buffer.hasArray()) {
+            return new String(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining(), StandardCharsets.UTF_8);
+        }
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.duplicate().get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
 
 }
