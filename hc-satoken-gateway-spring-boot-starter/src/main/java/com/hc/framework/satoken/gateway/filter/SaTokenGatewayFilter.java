@@ -78,7 +78,7 @@ public class SaTokenGatewayFilter {
     private void checkDynamicRoute(DynamicAuthRoute route) {
         // 角色校验
         if (route.hasRoleRequirement()) {
-            boolean hasRole = route.getRequireRoles().stream().anyMatch(StpUtil::hasRole);
+            boolean hasRole = matchPermission(route.getRequireRoles(), StpUtil::hasRole, route.getMatchMode());
             if (!hasRole) {
                 throw new NotRoleException(String.join(",", route.getRequireRoles()), StpUtil.getLoginType());
             }
@@ -86,7 +86,7 @@ public class SaTokenGatewayFilter {
 
         // 权限校验
         if (route.hasPermissionRequirement()) {
-            boolean hasPermission = route.getRequirePermissions().stream().anyMatch(StpUtil::hasPermission);
+            boolean hasPermission = matchPermission(route.getRequirePermissions(), StpUtil::hasPermission, route.getMatchMode());
             if (!hasPermission) {
                 throw new NotPermissionException(String.join(",", route.getRequirePermissions()), StpUtil.getLoginType());
             }
@@ -102,7 +102,7 @@ public class SaTokenGatewayFilter {
             // 角色校验
             if (hasText(route.getRequireRole())) {
                 List<String> requireRoles = parseList(route.getRequireRole());
-                boolean hasRole = requireRoles.stream().anyMatch(StpUtil::hasRole);
+                boolean hasRole = matchPermissionFromConfig(requireRoles, StpUtil::hasRole, route.getMatchMode());
                 if (!hasRole) {
                     throw new NotRoleException(route.getRequireRole(), StpUtil.getLoginType());
                 }
@@ -111,7 +111,7 @@ public class SaTokenGatewayFilter {
             // 权限校验
             if (hasText(route.getRequirePermission())) {
                 List<String> requirePerms = parseList(route.getRequirePermission());
-                boolean hasPermission = requirePerms.stream().anyMatch(StpUtil::hasPermission);
+                boolean hasPermission = matchPermissionFromConfig(requirePerms, StpUtil::hasPermission, route.getMatchMode());
                 if (!hasPermission) {
                     throw new NotPermissionException(route.getRequirePermission(), StpUtil.getLoginType());
                 }
@@ -124,5 +124,27 @@ public class SaTokenGatewayFilter {
         return Arrays.stream(s.split(","))
             .map(String::trim)
             .filter(i -> !i.isEmpty()).toList();
+    }
+
+    /**
+     * 根据 MatchMode 校验动态路由的角色/权限
+     */
+    private boolean matchPermission(List<String> requiredList, java.util.function.Predicate<String> checker,
+                                    DynamicAuthRoute.MatchMode matchMode) {
+        if (matchMode == DynamicAuthRoute.MatchMode.ALL) {
+            return requiredList.stream().allMatch(checker);
+        }
+        return requiredList.stream().anyMatch(checker);
+    }
+
+    /**
+     * 根据 MatchMode 校验配置路由的角色/权限
+     */
+    private boolean matchPermissionFromConfig(List<String> requiredList, java.util.function.Predicate<String> checker,
+                                              SaTokenGatewayProperties.MatchMode matchMode) {
+        if (matchMode == SaTokenGatewayProperties.MatchMode.ALL) {
+            return requiredList.stream().allMatch(checker);
+        }
+        return requiredList.stream().anyMatch(checker);
     }
 }

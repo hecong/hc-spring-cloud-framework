@@ -11,7 +11,7 @@ import org.dromara.hutool.core.text.StrUtil;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.expression.spel.support.SimpleEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
@@ -49,13 +49,12 @@ public class RepeatSubmitAspect {
     }
 
     /**
-     * 生成防重复KEY（支持SPEL）
+     * 生成防重复KEY（支持SPEL，使用 SimpleEvaluationContext 防止注入）
      */
     private String generateKey(ProceedingJoinPoint point, RepeatSubmit repeatSubmit) {
         if (StrUtil.isNotBlank(repeatSubmit.key())) {
-            StandardEvaluationContext context = new StandardEvaluationContext();
+            SimpleEvaluationContext context = SimpleEvaluationContext.forReadOnlyDataBinding().build();
             context.setVariable("args", point.getArgs());
-            context.setVariable("target", point.getTarget());
             return SPEL_PARSER.parseExpression(repeatSubmit.key()).getValue(context, String.class);
         }
         // 默认：类名+方法名

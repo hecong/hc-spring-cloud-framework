@@ -386,6 +386,27 @@ public class SaTokenProperties {
          * 是否需要登录
          */
         private Boolean requireLogin = true;
+
+        /**
+         * 多角色/权限的匹配模式
+         * <p>ANY：拥有任一角色/权限即可（默认，向后兼容）</p>
+         * <p>ALL：必须拥有全部角色/权限</p>
+         */
+        private MatchMode matchMode = MatchMode.ANY;
+    }
+
+    /**
+     * 角色/权限匹配模式
+     */
+    public enum MatchMode {
+        /**
+         * 拥有任一即可
+         */
+        ANY,
+        /**
+         * 必须全部拥有
+         */
+        ALL
     }
 
     // ==================== 登录配置 ====================

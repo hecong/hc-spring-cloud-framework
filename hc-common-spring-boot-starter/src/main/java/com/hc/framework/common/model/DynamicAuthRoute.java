@@ -86,6 +86,14 @@ public class DynamicAuthRoute implements Serializable {
     private List<String> requirePermissions;
 
     /**
+     * 多角色/权限的匹配模式
+     * <p>ANY：拥有任一角色/权限即可（默认）</p>
+     * <p>ALL：必须拥有全部角色/权限</p>
+     */
+    @Builder.Default
+    private MatchMode matchMode = MatchMode.ANY;
+
+    /**
      * 关联的服务名（可选，用于调试和日志）
      */
     private String serviceName;
@@ -152,5 +160,15 @@ public class DynamicAuthRoute implements Serializable {
             return null;
         }
         return String.join(",", requirePermissions);
+    }
+
+    /**
+     * 角色/权限匹配模式
+     */
+    public enum MatchMode {
+        /** 拥有任一即可 */
+        ANY,
+        /** 必须全部拥有 */
+        ALL
     }
 }

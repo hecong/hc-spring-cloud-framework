@@ -20,15 +20,17 @@
     </properties>
 
     <dependencies>
-        <!-- hc-common-spring-boot-starter -->
+        <!-- hc-common-spring-boot-starter（optional 避免传递 Servlet 依赖） -->
         <dependency>
             <groupId>com.hnhegui.framework</groupId>
             <artifactId>hc-common-spring-boot-starter</artifactId>
+            <optional>true</optional>
         </dependency>
-        <!-- hc-redis-spring-boot-starter -->
+        <!-- hc-redis-spring-boot-starter（optional 避免传递 Servlet/AOP 依赖） -->
         <dependency>
             <groupId>com.hnhegui.framework</groupId>
             <artifactId>hc-redis-spring-boot-starter</artifactId>
+            <optional>true</optional>
         </dependency>
         <!-- Spring Cloud Gateway -->
         <dependency>

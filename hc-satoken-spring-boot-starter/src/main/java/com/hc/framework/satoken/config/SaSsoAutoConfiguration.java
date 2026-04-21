@@ -3,11 +3,11 @@ package com.hc.framework.satoken.config;
 import com.hc.framework.satoken.config.SaTokenProperties.SsoConfig;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -50,7 +50,7 @@ import java.util.List;
  * @since 1.0.0
  */
 @Slf4j
-@Configuration
+@AutoConfiguration
 @EnableConfigurationProperties(SaTokenProperties.class)
 @ConditionalOnClass(name = "cn.dev33.satoken.sso.SaSsoManager")
 @ConditionalOnProperty(prefix = "hc.satoken.sso", name = "enabled", havingValue = "true")

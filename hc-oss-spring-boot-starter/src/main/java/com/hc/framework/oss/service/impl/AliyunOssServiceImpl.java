@@ -3,6 +3,7 @@ package com.hc.framework.oss.service.impl;
 import com.aliyun.oss.ClientBuilderConfiguration;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.hc.framework.oss.config.OssProperties;
 import com.hc.framework.oss.service.OssService;
 import jakarta.annotation.PostConstruct;
@@ -57,13 +58,23 @@ public class AliyunOssServiceImpl implements OssService {
 
     @Override
     public String upload(String fileName, InputStream inputStream) {
-        return upload(fileName, inputStream, "application/octet-stream");
+        return upload(fileName, inputStream, "application/octet-stream", -1);
     }
 
     @Override
     public String upload(String fileName, InputStream inputStream, String contentType) {
+        return upload(fileName, inputStream, contentType, -1);
+    }
+
+    @Override
+    public String upload(String fileName, InputStream inputStream, String contentType, long contentLength) {
         try {
-            ossClient.putObject(config.getBucketName(), fileName, inputStream);
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentType(contentType);
+            if (contentLength > 0) {
+                metadata.setContentLength(contentLength);
+            }
+            ossClient.putObject(config.getBucketName(), fileName, inputStream, metadata);
             return getUrl(fileName);
         } catch (Exception e) {
             log.error("阿里云OSS上传失败: {}", fileName, e);
@@ -93,7 +104,7 @@ public class AliyunOssServiceImpl implements OssService {
     @Override
     public String getUrl(String fileName, Integer expireTime) {
         try {
-            Date expiration = new Date(System.currentTimeMillis() + expireTime * 1000);
+            Date expiration = new Date(System.currentTimeMillis() + (long) expireTime * 1000);
             URL url = ossClient.generatePresignedUrl(config.getBucketName(), fileName, expiration);
             return url.toString();
         } catch (Exception e) {

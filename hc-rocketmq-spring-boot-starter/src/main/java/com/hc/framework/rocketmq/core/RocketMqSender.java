@@ -4,6 +4,7 @@ import com.hc.framework.common.util.JsonUtils;
 import com.hc.framework.rocketmq.util.MdcUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.annotation.PreDestroy;
 import org.apache.rocketmq.client.apis.producer.SendReceipt;
 import org.apache.rocketmq.client.apis.producer.Transaction;
 import org.apache.rocketmq.client.common.Pair;
@@ -14,6 +15,10 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
@@ -38,6 +43,22 @@ import java.util.function.BiConsumer;
 public class RocketMqSender {
 
     private final RocketMQClientTemplate rocketMQClientTemplate;
+
+    /**
+     * 异步发送线程池（有界队列 + CallerRunsPolicy 防止 OOM）
+     */
+    private final ExecutorService asyncExecutor = new ThreadPoolExecutor(
+            Runtime.getRuntime().availableProcessors(),
+            Runtime.getRuntime().availableProcessors() * 2,
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(1024),
+            r -> {
+                Thread t = new Thread(r, "rocketmq-async-sender");
+                t.setDaemon(true);
+                return t;
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy()
+    );
 
     /**
      * 构建消息对象
@@ -229,15 +250,15 @@ public class RocketMqSender {
         String destination = buildDestination(topic, tag);
         log.info("[RocketMQ] 发送异步消息 topic:{} tag:{} msgId:{}", topic, tag, msg.getMsgId());
 
-        // 使用异步线程执行发送
-        new Thread(() -> {
+        // 使用线程池执行发送
+        asyncExecutor.execute(() -> {
             try {
                 SendReceipt receipt = rocketMQClientTemplate.syncSendNormalMessage(destination, msg);
                 log.info("[RocketMQ] 异步消息发送成功 msgId:{}", msg.getMsgId());
             } catch (Exception e) {
                 log.error("[RocketMQ] 异步消息发送失败 msgId:{}", msg.getMsgId(), e);
             }
-        }).start();
+        });
     }
 
     /**
@@ -266,14 +287,14 @@ public class RocketMqSender {
         String destination = buildDestination(topic, tag);
         log.info("[RocketMQ] 发送单向消息 topic:{} tag:{} msgId:{}", topic, tag, msg.getMsgId());
 
-        // 使用异步线程执行发送，不等待结果
-        new Thread(() -> {
+        // 使用线程池执行发送，不等待结果
+        asyncExecutor.execute(() -> {
             try {
                 rocketMQClientTemplate.syncSendNormalMessage(destination, msg);
             } catch (Exception e) {
-                // 单向消息不处理异常
+                log.warn("[RocketMQ] 单向消息发送失败（已忽略） msgId:{}", msg.getMsgId());
             }
-        }).start();
+        });
     }
 
     /**
@@ -355,6 +376,23 @@ public class RocketMqSender {
             return topic;
         }
         return topic + ":" + tag;
+    }
+
+    /**
+     * 销毁时关闭线程池
+     */
+    @PreDestroy
+    public void destroy() {
+        asyncExecutor.shutdown();
+        try {
+            if (!asyncExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+                asyncExecutor.shutdownNow();
+                log.warn("[RocketMQ] 异步发送线程池强制关闭");
+            }
+        } catch (InterruptedException e) {
+            asyncExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
 }

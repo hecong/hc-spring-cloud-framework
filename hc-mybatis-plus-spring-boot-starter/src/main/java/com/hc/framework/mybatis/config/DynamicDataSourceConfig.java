@@ -3,10 +3,10 @@ package com.hc.framework.mybatis.config;
 import com.baomidou.dynamic.datasource.toolkit.DynamicDataSourceContextHolder;
 import com.hc.framework.mybatis.properties.MyBatisPlusProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
 
 /**
  * 动态数据源配置类
@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
  * @author hc
  */
 @Slf4j
-@Configuration
+@AutoConfiguration
 @ConditionalOnClass(DynamicDataSourceContextHolder.class)
 @EnableConfigurationProperties(MyBatisPlusProperties.class)
 @ConditionalOnProperty(prefix = "hc.mybatis-plus.dynamic-data-source", name = "enabled", havingValue = "true", matchIfMissing = true)

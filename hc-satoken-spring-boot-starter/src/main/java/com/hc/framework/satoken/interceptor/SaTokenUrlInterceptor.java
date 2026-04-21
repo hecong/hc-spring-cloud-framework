@@ -142,7 +142,7 @@ public class SaTokenUrlInterceptor implements HandlerInterceptor {
         // 检查角色
         if (hasText(permission.getRole())) {
             List<String> requiredRoles = parseList(permission.getRole());
-            boolean hasRole = requiredRoles.stream().anyMatch(StpUtil::hasRole);
+            boolean hasRole = matchPermission(requiredRoles, StpUtil::hasRole, permission.getMatchMode());
             if (!hasRole) {
                 log.warn("用户缺少所需角色: path={}, required={}, current={}",
                         requestPath, requiredRoles, StpUtil.getRoleList());
@@ -153,7 +153,7 @@ public class SaTokenUrlInterceptor implements HandlerInterceptor {
         // 检查权限
         if (hasText(permission.getPermission())) {
             List<String> requiredPerms = parseList(permission.getPermission());
-            boolean hasPerm = requiredPerms.stream().anyMatch(StpUtil::hasPermission);
+            boolean hasPerm = matchPermission(requiredPerms, StpUtil::hasPermission, permission.getMatchMode());
             if (!hasPerm) {
                 log.warn("用户缺少所需权限: path={}, required={}, current={}",
                         requestPath, requiredPerms, StpUtil.getPermissionList());
@@ -182,5 +182,20 @@ public class SaTokenUrlInterceptor implements HandlerInterceptor {
      */
     private boolean hasText(String str) {
         return str != null && !str.trim().isEmpty();
+    }
+
+    /**
+     * 根据匹配模式校验角色/权限
+     *
+     * @param requiredList 所需角色/权限列表
+     * @param checker      校验函数（hasRole 或 hasPermission）
+     * @param matchMode    匹配模式：ANY=任一即可，ALL=必须全部
+     */
+    private boolean matchPermission(List<String> requiredList, java.util.function.Predicate<String> checker,
+                                    SaTokenProperties.MatchMode matchMode) {
+        if (matchMode == SaTokenProperties.MatchMode.ALL) {
+            return requiredList.stream().allMatch(checker);
+        }
+        return requiredList.stream().anyMatch(checker);
     }
 }

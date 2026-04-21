@@ -37,17 +37,24 @@ public class MinioOssServiceImpl implements OssService {
 
     @Override
     public String upload(String fileName, InputStream inputStream) {
-        return upload(fileName, inputStream, "application/octet-stream");
+        return upload(fileName, inputStream, "application/octet-stream", -1);
     }
 
     @Override
     public String upload(String fileName, InputStream inputStream, String contentType) {
+        return upload(fileName, inputStream, contentType, -1);
+    }
+
+    @Override
+    public String upload(String fileName, InputStream inputStream, String contentType, long contentLength) {
         try {
+            long objectSize = contentLength > 0 ? contentLength : -1;
+            long partSize = contentLength > 0 ? -1 : 5 * 1024 * 1024;
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(config.getBucketName())
                             .object(fileName)
-                            .stream(inputStream, inputStream.available(), -1)
+                            .stream(inputStream, objectSize, partSize)
                             .contentType(contentType)
                             .build()
             );

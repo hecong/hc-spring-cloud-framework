@@ -7,6 +7,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.HexFormat;
 
 /**
@@ -60,6 +61,26 @@ public class SaPasswordEncoder {
      * BCrypt 编码器（延迟初始化）
      */
     private static volatile BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    /**
+     * 安全随机数生成器（用于生成盐值）
+     */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
+     * 盐值字节长度
+     */
+    private static final int SALT_BYTES = 16;
+
+    /**
+     * MD5 编码前缀标识
+     */
+    private static final String MD5_PREFIX = "{md5}";
+
+    /**
+     * SM3 编码前缀标识
+     */
+    private static final String SM3_PREFIX = "{sm3}";
 
     private SaPasswordEncoder() {
         // 工具类，禁止实例化
@@ -182,54 +203,101 @@ public class SaPasswordEncoder {
     // ==================== MD5 算法 ====================
 
     /**
-     * 使用 MD5 加密
+     * 使用 MD5 加密（带随机盐值）
      *
      * <p>注意：MD5 已不再推荐用于密码加密，仅用于兼容旧系统。</p>
+     * <p>格式：{md5}{salt}$hash</p>
      */
     private static String encodeWithMD5(CharSequence rawPassword) {
         try {
+            // 生成随机盐值
+            byte[] saltBytes = new byte[SALT_BYTES];
+            SECURE_RANDOM.nextBytes(saltBytes);
+            String salt = HexFormat.of().formatHex(saltBytes);
+
             MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(salt.getBytes(StandardCharsets.UTF_8));
             byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
+            String hash = HexFormat.of().formatHex(digest);
+            return MD5_PREFIX + salt + "$" + hash;
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("MD5 算法不可用", e);
         }
     }
 
     /**
-     * 使用 MD5 验证
+     * 使用 MD5 验证（兼容旧格式和无盐格式）
      */
     private static boolean matchesWithMD5(CharSequence rawPassword, String encodedPassword) {
-        String encrypted = encodeWithMD5(rawPassword);
-        return encrypted.equalsIgnoreCase(encodedPassword);
+        // 新格式：{md5}{salt}$hash
+        if (encodedPassword.startsWith(MD5_PREFIX)) {
+            String body = encodedPassword.substring(MD5_PREFIX.length());
+            int dollarIndex = body.indexOf('$');
+            if (dollarIndex > 0) {
+                String salt = body.substring(0, dollarIndex);
+                String hash = body.substring(dollarIndex + 1);
+                try {
+                    MessageDigest md = MessageDigest.getInstance("MD5");
+                    md.update(salt.getBytes(StandardCharsets.UTF_8));
+                    byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
+                    String computed = HexFormat.of().formatHex(digest);
+                    return computed.equalsIgnoreCase(hash);
+                } catch (NoSuchAlgorithmException e) {
+                    throw new IllegalStateException("MD5 算法不可用", e);
+                }
+            }
+        }
+        // 兼容旧格式：无盐值的 32 位十六进制
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
+            String computed = HexFormat.of().formatHex(digest);
+            return computed.equalsIgnoreCase(encodedPassword);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("MD5 算法不可用", e);
+        }
     }
 
     // ==================== SM3 算法 ====================
 
     /**
-     * 使用 SM3 加密
+     * 使用 SM3 加密（带随机盐值）
      *
      * <p>SM3 是中国国家密码管理局发布的密码哈希算法，输出长度为 256 位（64 个十六进制字符）。</p>
      * <p>适用于需要符合国密标准的应用场景。</p>
+     * <p>格式：{sm3}{salt}$hash</p>
      */
     private static String encodeWithSM3(CharSequence rawPassword) {
+        // 生成随机盐值
+        byte[] saltBytes = new byte[SALT_BYTES];
+        SECURE_RANDOM.nextBytes(saltBytes);
+        String salt = HexFormat.of().formatHex(saltBytes);
+
+        String hash = computeSM3(salt, rawPassword);
+        return SM3_PREFIX + salt + "$" + hash;
+    }
+
+    /**
+     * 计算 SM3 哈希（盐值 + 密码）
+     */
+    private static String computeSM3(String salt, CharSequence rawPassword) {
         try {
             MessageDigest md = MessageDigest.getInstance("SM3");
+            md.update(salt.getBytes(StandardCharsets.UTF_8));
             byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException e) {
             // 如果 JDK 不支持 SM3，使用 Bouncy Castle 实现
-            return encodeWithSM3Fallback(rawPassword);
+            return computeSM3Fallback(salt, rawPassword);
         }
     }
 
     /**
-     * SM3 备用实现（当 JDK 不支持时）
+     * SM3 备用实现（当 JDK 不支持时，带盐值）
      */
-    private static String encodeWithSM3Fallback(CharSequence rawPassword) {
-        // 简化的 SM3 实现
-        byte[] data = rawPassword.toString().getBytes(StandardCharsets.UTF_8);
-        byte[] hash = sm3Hash(data);
+    private static String computeSM3Fallback(String salt, CharSequence rawPassword) {
+        byte[] saltedData = (salt + rawPassword).getBytes(StandardCharsets.UTF_8);
+        byte[] hash = sm3Hash(saltedData);
         return HexFormat.of().formatHex(hash);
     }
 
@@ -356,17 +424,43 @@ public class SaPasswordEncoder {
     }
 
     /**
-     * 使用 SM3 验证
+     * 使用 SM3 验证（兼容旧格式和无盐格式）
      */
     private static boolean matchesWithSM3(CharSequence rawPassword, String encodedPassword) {
-        String encrypted = encodeWithSM3(rawPassword);
-        return encrypted.equalsIgnoreCase(encodedPassword);
+        // 新格式：{sm3}{salt}$hash
+        if (encodedPassword.startsWith(SM3_PREFIX)) {
+            String body = encodedPassword.substring(SM3_PREFIX.length());
+            int dollarIndex = body.indexOf('$');
+            if (dollarIndex > 0) {
+                String salt = body.substring(0, dollarIndex);
+                String hash = body.substring(dollarIndex + 1);
+                String computed = computeSM3(salt, rawPassword);
+                return computed.equalsIgnoreCase(hash);
+            }
+        }
+        // 兼容旧格式：无盐值的 64 位十六进制
+        try {
+            MessageDigest md = MessageDigest.getInstance("SM3");
+            byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
+            String computed = HexFormat.of().formatHex(digest);
+            return computed.equalsIgnoreCase(encodedPassword);
+        } catch (NoSuchAlgorithmException e) {
+            String computed = computeSM3Fallback("", rawPassword);
+            return computed.equalsIgnoreCase(encodedPassword);
+        }
     }
 
     // ==================== 算法识别 ====================
 
     /**
      * 根据加密后的密码自动识别算法
+     *
+     * <p>识别优先级：</p>
+     * <ol>
+     *   <li>前缀标识：{md5}、{sm3}（新增的带盐格式）</li>
+     *   <li>BCrypt 格式：$2a$、$2b$、$2y$ 开头</li>
+     *   <li>长度推断：SM3=64位十六进制、MD5=32位十六进制</li>
+     * </ol>
      *
      * @param encodedPassword 加密后的密码
      * @return 识别出的算法
@@ -376,6 +470,14 @@ public class SaPasswordEncoder {
             return defaultAlgorithm;
         }
 
+        // 优先匹配前缀标识（消除长度推断的歧义）
+        if (encodedPassword.startsWith(MD5_PREFIX)) {
+            return PasswordAlgorithm.MD5;
+        }
+        if (encodedPassword.startsWith(SM3_PREFIX)) {
+            return PasswordAlgorithm.SM3;
+        }
+
         // BCrypt 格式：$2a$、$2b$、$2y$ 开头
         if (encodedPassword.startsWith("$2a$") ||
                 encodedPassword.startsWith("$2b$") ||
@@ -383,12 +485,12 @@ public class SaPasswordEncoder {
             return PasswordAlgorithm.BCRYPT;
         }
 
-        // SM3：64 位十六进制
+        // SM3：64 位十六进制（旧格式兼容）
         if (encodedPassword.length() == 64 && isHex(encodedPassword)) {
             return PasswordAlgorithm.SM3;
         }
 
-        // MD5：32 位十六进制
+        // MD5：32 位十六进制（旧格式兼容）
         if (encodedPassword.length() == 32 && isHex(encodedPassword)) {
             return PasswordAlgorithm.MD5;
         }

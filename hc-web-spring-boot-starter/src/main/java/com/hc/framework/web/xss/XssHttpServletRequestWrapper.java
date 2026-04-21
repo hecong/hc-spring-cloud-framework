@@ -40,10 +40,11 @@ public class XssHttpServletRequestWrapper extends HttpServletRequestWrapper {
         Map<String, String[]> parameters = super.getParameterMap();
         for (Map.Entry<String, String[]> entry : parameters.entrySet()) {
             String[] values = entry.getValue();
+            String[] escapedValues = new String[values.length];
             for (int i = 0; i < values.length; i++) {
-                values[i] = XssKit.escape(values[i]);
+                escapedValues[i] = XssKit.escape(values[i]);
             }
-            map.put(entry.getKey(), values);
+            map.put(entry.getKey(), escapedValues);
         }
         return map;
     }

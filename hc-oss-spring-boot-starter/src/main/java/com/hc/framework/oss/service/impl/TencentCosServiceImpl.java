@@ -109,15 +109,22 @@ public class TencentCosServiceImpl implements OssService {
 
     @Override
     public String upload(String fileName, InputStream inputStream) {
-        return upload(fileName, inputStream, "application/octet-stream");
+        return upload(fileName, inputStream, "application/octet-stream", -1);
     }
 
     @Override
     public String upload(String fileName, InputStream inputStream, String contentType) {
+        return upload(fileName, inputStream, contentType, -1);
+    }
+
+    @Override
+    public String upload(String fileName, InputStream inputStream, String contentType, long contentLength) {
         try {
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentType(contentType);
-            metadata.setContentLength(inputStream.available());
+            if (contentLength > 0) {
+                metadata.setContentLength(contentLength);
+            }
 
             PutObjectRequest request = new PutObjectRequest(
                     config.getBucketName(),
@@ -170,7 +177,7 @@ public class TencentCosServiceImpl implements OssService {
     public String getUrl(String fileName, Integer expireTime) {
         try {
             // 生成带签名的URL
-            Date expirationDate = new Date(System.currentTimeMillis() + expireTime * 1000);
+            Date expirationDate = new Date(System.currentTimeMillis() + (long) expireTime * 1000);
             URL url = cosClient.generatePresignedUrl(
                     config.getBucketName(),
                     fileName,

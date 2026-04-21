@@ -23,19 +23,54 @@ public class XssKit {
     private static final Pattern[] DANGEROUS_PATTERNS = {
         // <script> 标签及其内容
         Pattern.compile("(?i)<script[^>]*>.*?</script>", Pattern.DOTALL),
+        // 自闭合 <script ... />
+        Pattern.compile("(?i)<script[^>]*/?\\s*>", Pattern.DOTALL),
         // <iframe> 标签
         Pattern.compile("(?i)<iframe[^>]*>.*?</iframe>", Pattern.DOTALL),
+        Pattern.compile("(?i)<iframe[^>]*/?\\s*>", Pattern.DOTALL),
         // <object> 标签
         Pattern.compile("(?i)<object[^>]*>.*?</object>", Pattern.DOTALL),
+        Pattern.compile("(?i)<object[^>]*/?\\s*>", Pattern.DOTALL),
         // <embed> 标签
         Pattern.compile("(?i)<embed[^>]*>.*?</embed>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(?i)<embed[^>]*/?\\s*>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE),
         // <form> 标签（防止表单劫持）
         Pattern.compile("(?i)<form[^>]*>.*?</form>", Pattern.DOTALL),
+        Pattern.compile("(?i)<form[^>]*/?\\s*>", Pattern.DOTALL),
+        // <svg> 标签（可内嵌 JS）
+        Pattern.compile("(?i)<svg[^>]*>.*?</svg>", Pattern.DOTALL),
+        Pattern.compile("(?i)<svg[^>]*/?\\s*>", Pattern.DOTALL),
+        // <math> 标签（可内嵌 JS）
+        Pattern.compile("(?i)<math[^>]*>.*?</math>", Pattern.DOTALL),
+        Pattern.compile("(?i)<math[^>]*/?\\s*>", Pattern.DOTALL),
+        // <style> 标签（CSS 注入）
+        Pattern.compile("(?i)<style[^>]*>.*?</style>", Pattern.DOTALL),
+        Pattern.compile("(?i)<style[^>]*/?\\s*>", Pattern.DOTALL),
+        // <link> 标签（可加载外部资源）
+        Pattern.compile("(?i)<link[^>]*/?\\s*>", Pattern.DOTALL),
+        // <base> 标签（可劫持 URL 基准）
+        Pattern.compile("(?i)<base[^>]*/?\\s*>", Pattern.DOTALL),
+        // <meta> 标签（可刷新跳转）
+        Pattern.compile("(?i)<meta[^>]*/?\\s*>", Pattern.DOTALL),
+        // <details> 标签（ontoggle 事件）
+        Pattern.compile("(?i)<details[^>]*>.*?</details>", Pattern.DOTALL),
+        Pattern.compile("(?i)<details[^>]*/?\\s*>", Pattern.DOTALL),
+        // <textarea> 标签
+        Pattern.compile("(?i)<textarea[^>]*>.*?</textarea>", Pattern.DOTALL),
+        // <noscript> 标签
+        Pattern.compile("(?i)<noscript[^>]*>.*?</noscript>", Pattern.DOTALL),
+        // <template> 标签
+        Pattern.compile("(?i)<template[^>]*>.*?</template>", Pattern.DOTALL),
         // 表达式和 CSS 注入
         Pattern.compile("(?i)expression\\s*\\([^)]*\\)"),
         // 危险 URL 协议
         Pattern.compile("(?i)url\\s*\\(\\s*['\"]*javascript:")
     };
+
+    /**
+     * 最大迭代次数，防止恶意构造导致无限循环
+     */
+    private static final int MAX_ITERATIONS = 10;
 
     /**
      * 智能 XSS 过滤
@@ -56,12 +91,22 @@ public class XssKit {
 
         String result = value;
 
-        // 1. 移除危险事件处理器和协议
-        result = EVENT_PATTERN.matcher(result).replaceAll("");
+        // 迭代清理，防止嵌套标签重构（如 <scr<script></script>ipt>alert(1)</script>）
+        for (int i = 0; i < MAX_ITERATIONS; i++) {
+            String previous = result;
 
-        // 2. 移除危险标签
-        for (Pattern pattern : DANGEROUS_PATTERNS) {
-            result = pattern.matcher(result).replaceAll("");
+            // 1. 移除危险事件处理器和协议
+            result = EVENT_PATTERN.matcher(result).replaceAll("");
+
+            // 2. 移除危险标签
+            for (Pattern pattern : DANGEROUS_PATTERNS) {
+                result = pattern.matcher(result).replaceAll("");
+            }
+
+            // 如果本轮没有变化，说明清理完成
+            if (result.equals(previous)) {
+                break;
+            }
         }
 
         return result;

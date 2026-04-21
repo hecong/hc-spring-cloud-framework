@@ -19,6 +19,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -26,9 +27,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 /**
  * Excel自动配置类
  */
-@Configuration
+@AutoConfiguration
 @EnableConfigurationProperties(ExcelAsyncPoolProperties.class)
-@Import(ExcelAutoConfiguration.RedisTaskStoreConfiguration.class)
+@Import({ExcelAutoConfiguration.RedisTaskStoreConfiguration.class,
+         ExcelAutoConfiguration.LocalTaskStoreConfiguration.class})
 public class ExcelAutoConfiguration {
 
     @Bean
@@ -50,12 +52,6 @@ public class ExcelAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(ExcelTaskStore.class)
-    public ExcelTaskStore localExcelTaskStore() {
-        return new LocalExcelTaskStore();
-    }
-
-    @Bean
     public ExcelAsyncExecutor excelAsyncExecutor(ExcelOperationRecorder operationRecorder,
                                                   ExcelFileStorage fileStorage, ExcelOperatorResolver operatorResolver,
                                                   ExcelTaskStore taskStore) {
@@ -73,10 +69,10 @@ public class ExcelAutoConfiguration {
     }
 
     /**
-     * Redis任务存储配置（仅在classpath中存在RedisTemplate时激活）
+     * Redis任务存储配置（优先级高于 LocalExcelTaskStore）
      *
-     * <p>优先级高于LocalExcelTaskStore：当项目中引入了hc-redis-spring-boot-starter时，
-     * 自动使用Redis存储任务状态，支持分布式部署。</p>
+     * <p>当项目中引入了 hc-redis-spring-boot-starter 且 RedisTemplate 可用时，
+     * 自动使用 Redis 存储任务状态，支持分布式部署。</p>
      */
     @Configuration
     @ConditionalOnClass(RedisTemplate.class)
@@ -87,6 +83,19 @@ public class ExcelAutoConfiguration {
         @ConditionalOnBean(RedisTemplate.class)
         public ExcelTaskStore redisExcelTaskStore(RedisTemplate<String, Object> redisTemplate) {
             return new RedisExcelTaskStore(redisTemplate);
+        }
+    }
+
+    /**
+     * 本地任务存储配置（兜底，当 Redis 不可用时使用）
+     */
+    @Configuration
+    static class LocalTaskStoreConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean(ExcelTaskStore.class)
+        public ExcelTaskStore localExcelTaskStore() {
+            return new LocalExcelTaskStore();
         }
     }
 }
