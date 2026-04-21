@@ -14,6 +14,7 @@ import com.hc.framework.excel.model.TemplateExportRequest;
 import com.hc.framework.excel.service.ExcelFileStorage;
 import com.hc.framework.excel.service.ExcelOperationRecorder;
 import com.hc.framework.excel.service.ExcelOperatorResolver;
+import com.hc.framework.excel.service.ExcelTaskStore;
 import com.hc.framework.excel.util.ExcelHeadUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +28,6 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -48,13 +47,15 @@ public class ExcelAsyncExecutor {
     private final ExcelOperationRecorder operationRecorder;
     private final ExcelFileStorage fileStorage;
     private final ExcelOperatorResolver operatorResolver;
+    private final ExcelTaskStore taskStore;
 
     public ExcelAsyncExecutor(ExcelOperationRecorder operationRecorder,
-                              ExcelFileStorage fileStorage, ExcelOperatorResolver operatorResolver) {
+                              ExcelFileStorage fileStorage, ExcelOperatorResolver operatorResolver,
+                              ExcelTaskStore taskStore) {
         this.operationRecorder = operationRecorder;
         this.fileStorage = fileStorage;
         this.operatorResolver = operatorResolver;
-
+        this.taskStore = taskStore;
     }
 
     // ==================== 常量定义 ====================
@@ -64,11 +65,6 @@ public class ExcelAsyncExecutor {
     private static final int DEFAULT_HEAD_ROW_NUMBER = 0;
     private static final String DEFAULT_SHEET_NAME = "Sheet1";
     private static final String DEFAULT_FILE_NAME = "export";
-
-    // ==================== 任务存储 ====================
-
-    private final ConcurrentHashMap<String, ExcelTaskStatus> taskStore = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, String> exportFileStore = new ConcurrentHashMap<>();
 
     // ==================== 任务管理 ====================
 
@@ -80,7 +76,8 @@ public class ExcelAsyncExecutor {
      */
     public String createTaskId(ExcelTaskStatus.TaskType type) {
         String taskId = UUID.randomUUID().toString().replace("-", "");
-        taskStore.put(taskId, new ExcelTaskStatus(taskId, type));
+        ExcelTaskStatus status = new ExcelTaskStatus(taskId, type);
+        taskStore.saveTask(taskId, status);
         return taskId;
     }
 
@@ -91,7 +88,7 @@ public class ExcelAsyncExecutor {
      * @return 任务状态
      */
     public ExcelTaskStatus getTaskStatus(String taskId) {
-        return taskStore.get(taskId);
+        return taskStore.getTask(taskId);
     }
 
     /**
@@ -101,7 +98,7 @@ public class ExcelAsyncExecutor {
      * @return 文件URL
      */
     public String getExportFilePath(String taskId) {
-        return exportFileStore.get(taskId);
+        return taskStore.getExportFileUrl(taskId);
     }
 
     /**
@@ -110,12 +107,13 @@ public class ExcelAsyncExecutor {
      * @param taskId 任务ID
      */
     public void removeTask(String taskId) {
-        String fileUrl = exportFileStore.remove(taskId);
+        String fileUrl = taskStore.getExportFileUrl(taskId);
         if (fileUrl != null) {
             // 删除云端文件
             fileStorage.delete(fileUrl);
         }
-        taskStore.remove(taskId);
+        taskStore.removeExportFileUrl(taskId);
+        taskStore.removeTask(taskId);
     }
 
     // ==================== 数据导入 ====================
@@ -136,7 +134,7 @@ public class ExcelAsyncExecutor {
                                   int batchSize, Consumer<List<T>> batchHandler,
                                   Consumer<ExcelImportResult.ErrorRow<T>> errorHandler,
                                   Consumer<Integer> progressCallback) {
-        ExcelTaskStatus taskStatus = taskStore.get(taskId);
+        ExcelTaskStatus taskStatus = taskStore.getTask(taskId);
         String operatorName = operatorResolver.getOperatorName();
         String operatorId = operatorResolver.getOperatorId();
 
@@ -151,12 +149,12 @@ public class ExcelAsyncExecutor {
                 .doRead();
 
             completeTask(taskId, taskStatus,
-                taskStatus.getSuccessCount().get(), taskStatus.getFailCount().get());
+                taskStatus.getSuccessCount(), taskStatus.getFailCount());
 
             // 记录导入完成
             operationRecorder.recordImportComplete(taskId, operatorId, operatorName, true,
-                taskStatus.getSuccessCount().get(),
-                taskStatus.getFailCount().get(),
+                taskStatus.getSuccessCount(),
+                taskStatus.getFailCount(),
                 null);
 
         } catch (Exception e) {
@@ -180,8 +178,8 @@ public class ExcelAsyncExecutor {
     @Async("excelAsyncExecutor")
     public <T> void executeExport(String taskId, ExcelExportRequest request,
                                   Supplier<List<T>> dataQuery, Class<T> clazz,
-                                  Consumer<Integer> progressCallback) {
-        ExcelTaskStatus taskStatus = taskStore.get(taskId);
+                                  Consumer<ExcelTaskStatus> progressCallback) {
+        ExcelTaskStatus taskStatus = taskStore.getTask(taskId);
         String tempFilePath = buildTempFilePath(request.getFileName(), taskId);
         int batchSize = getBatchSize(request.getBatchSize());
         String operatorId = operatorResolver.getOperatorId();
@@ -234,8 +232,8 @@ public class ExcelAsyncExecutor {
     @Async("excelAsyncExecutor")
     public <T> void executeExportAll(String taskId, ExcelExportRequest request,
                                      Supplier<List<T>> allDataQuery, Class<T> clazz,
-                                     Consumer<Integer> progressCallback) {
-        ExcelTaskStatus taskStatus = taskStore.get(taskId);
+                                     Consumer<ExcelTaskStatus> progressCallback) {
+        ExcelTaskStatus taskStatus = taskStore.getTask(taskId);
         String tempFilePath = buildTempFilePath(request.getFileName(), taskId);
         String operatorId = operatorResolver.getOperatorId();
         String operatorName = operatorResolver.getOperatorName();
@@ -253,7 +251,7 @@ public class ExcelAsyncExecutor {
                             getSheetName(request.getSheetName()))
                         .doWrite(allData);
                 }
-                taskStatus.setProcessed(new AtomicInteger(totalCount));
+                taskStatus.setProcessed(totalCount);
             }
 
             // 上传文件到云端存储
@@ -284,8 +282,8 @@ public class ExcelAsyncExecutor {
     @Async("excelAsyncExecutor")
     public <T> void executeTemplateExport(String taskId, TemplateExportRequest request,
                                           Supplier<List<T>> dataQuery,
-                                          Consumer<Integer> progressCallback) {
-        ExcelTaskStatus taskStatus = taskStore.get(taskId);
+                                          Consumer<ExcelTaskStatus> progressCallback) {
+        ExcelTaskStatus taskStatus = taskStore.getTask(taskId);
         String tempFilePath = buildTempFilePath(request.getFileName(), taskId);
         String operatorId = operatorResolver.getOperatorId();
         String operatorName = operatorResolver.getOperatorName();
@@ -348,8 +346,8 @@ public class ExcelAsyncExecutor {
     public void executeDynamicHeadExport(String taskId, String sheetName,
                                          List<DynamicHead> heads,
                                          Supplier<List<Map<String, Object>>> dataQuery,
-                                         Consumer<Integer> progressCallback) {
-        ExcelTaskStatus taskStatus = taskStore.get(taskId);
+                                         Consumer<ExcelTaskStatus> progressCallback) {
+        ExcelTaskStatus taskStatus = taskStore.getTask(taskId);
         String tempFilePath = buildTempFilePath("export", taskId);
         String operatorId = operatorResolver.getOperatorId();
         String operatorName = operatorResolver.getOperatorName();
@@ -421,26 +419,30 @@ public class ExcelAsyncExecutor {
 
     // ==================== 私有方法 - 任务状态更新 ====================
 
-    private void updateProgress(ExcelTaskStatus taskStatus, Consumer<Integer> progressCallback, int count) {
-        taskStatus.setProcessed(new AtomicInteger(count));
+    private void updateProgress(ExcelTaskStatus taskStatus, Consumer<ExcelTaskStatus> progressCallback, int count) {
+        taskStatus.setProcessed(count);
         if (progressCallback != null) {
-            progressCallback.accept(count);
+            progressCallback.accept(taskStatus);
         }
+        // 每次更新进度后同步到存储
+        taskStore.saveTask(taskStatus.getTaskId(), taskStatus);
     }
 
     private void completeTask(String taskId, ExcelTaskStatus taskStatus, Object... logArgs) {
         taskStatus.complete();
+        taskStore.saveTask(taskId, taskStatus);
         log.info("Excel{}任务完成, taskId: {}", "导入", appendTaskId(taskId, logArgs));
     }
 
     private void completeExportTask(String taskId, ExcelTaskStatus taskStatus,
                                     String fileUrl, int totalCount, String taskType,
-                                    Consumer<Integer> progressCallback) {
-        exportFileStore.put(taskId, fileUrl);
+                                    Consumer<ExcelTaskStatus> progressCallback) {
+        taskStore.saveExportFileUrl(taskId, fileUrl);
         taskStatus.setTotal(totalCount);
         taskStatus.complete();
+        taskStore.saveTask(taskId, taskStatus);
         if (progressCallback != null) {
-            progressCallback.accept(totalCount);
+            progressCallback.accept(taskStatus);
         }
         log.info("Excel{}任务完成, taskId: {}, 总行数: {}, 文件URL: {}", taskType, taskId, totalCount, fileUrl);
     }
@@ -453,6 +455,7 @@ public class ExcelAsyncExecutor {
     private void failTask(String taskId, ExcelTaskStatus taskStatus, String taskType, Exception e) {
         log.error("Excel{}任务失败, taskId: {}", taskType, taskId, e);
         taskStatus.fail(e.getMessage());
+        taskStore.saveTask(taskId, taskStatus);
     }
 
     private Object[] appendTaskId(String taskId, Object... args) {

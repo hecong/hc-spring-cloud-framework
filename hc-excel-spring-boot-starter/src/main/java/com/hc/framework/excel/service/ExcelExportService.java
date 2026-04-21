@@ -49,7 +49,7 @@ public interface ExcelExportService {
      * @return 任务ID
      */
     <T> String exportDataAsync(ExcelExportRequest request, Supplier<List<T>> dataQuery,
-                                Class<T> clazz, Consumer<Integer> progressCallback);
+                                Class<T> clazz, Consumer<ExcelTaskStatus> progressCallback);
 
     /**
      * 异步导出-全部数据查询（大数据）
@@ -62,7 +62,7 @@ public interface ExcelExportService {
      * @return 任务ID
      */
     <T> String exportDataAsyncAll(ExcelExportRequest request, Supplier<List<T>> allDataQuery,
-                                  Class<T> clazz, Consumer<Integer> progressCallback);
+                                  Class<T> clazz, Consumer<ExcelTaskStatus> progressCallback);
 
     // ==================== 模板导出 ====================
 
@@ -94,7 +94,7 @@ public interface ExcelExportService {
      * @return 任务ID
      */
     <T> String exportByTemplateAsync(TemplateExportRequest request, Supplier<List<T>> dataQuery,
-                                      Consumer<Integer> progressCallback);
+                                      Consumer<ExcelTaskStatus> progressCallback);
 
     // ==================== 动态表头导出 ====================
 
@@ -127,7 +127,7 @@ public interface ExcelExportService {
      * @return 任务ID
      */
     String exportWithDynamicHeadAsync(String fileName, String sheetName, List<DynamicHead> heads,
-                                       Supplier<List<Map<String, Object>>> dataQuery, Consumer<Integer> progressCallback);
+                                       Supplier<List<Map<String, Object>>> dataQuery, Consumer<ExcelTaskStatus> progressCallback);
 
     // ==================== 任务管理 ====================
 

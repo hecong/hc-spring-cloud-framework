@@ -64,7 +64,7 @@ public class ExcelExportServiceImpl implements ExcelExportService {
 
     @Override
     public <T> String exportDataAsync(ExcelExportRequest request, Supplier<List<T>> dataQuery,
-                                       Class<T> clazz, Consumer<Integer> progressCallback) {
+                                       Class<T> clazz, Consumer<ExcelTaskStatus> progressCallback) {
         String taskId = asyncExecutor.createTaskId(ExcelTaskStatus.TaskType.EXPORT);
         // 记录导出操作（无感知，异步获取数据条数会影响性能，记录基本信息）
         asyncExecutor.executeExport(taskId, request, dataQuery, clazz, progressCallback);
@@ -73,7 +73,7 @@ public class ExcelExportServiceImpl implements ExcelExportService {
 
     @Override
     public <T> String exportDataAsyncAll(ExcelExportRequest request, Supplier<List<T>> allDataQuery,
-                                         Class<T> clazz, Consumer<Integer> progressCallback) {
+                                         Class<T> clazz, Consumer<ExcelTaskStatus> progressCallback) {
         String taskId = asyncExecutor.createTaskId(ExcelTaskStatus.TaskType.EXPORT);
         // 记录导出操作
         asyncExecutor.executeExportAll(taskId, request, allDataQuery, clazz, progressCallback);
@@ -121,7 +121,7 @@ public class ExcelExportServiceImpl implements ExcelExportService {
 
     @Override
     public <T> String exportByTemplateAsync(TemplateExportRequest request, Supplier<List<T>> dataQuery,
-                                             Consumer<Integer> progressCallback) {
+                                             Consumer<ExcelTaskStatus> progressCallback) {
         String taskId = asyncExecutor.createTaskId(ExcelTaskStatus.TaskType.EXPORT);
         asyncExecutor.executeTemplateExport(taskId, request, dataQuery, progressCallback);
         return taskId;
@@ -160,7 +160,7 @@ public class ExcelExportServiceImpl implements ExcelExportService {
 
     @Override
     public String exportWithDynamicHeadAsync(String fileName, String sheetName, List<DynamicHead> heads,
-                                              Supplier<List<Map<String, Object>>> dataQuery, Consumer<Integer> progressCallback) {
+                                              Supplier<List<Map<String, Object>>> dataQuery, Consumer<ExcelTaskStatus> progressCallback) {
         String taskId = asyncExecutor.createTaskId(ExcelTaskStatus.TaskType.EXPORT);
         asyncExecutor.executeDynamicHeadExport(taskId, sheetName, heads, dataQuery, progressCallback);
         return taskId;

@@ -2,8 +2,6 @@ package com.hc.framework.excel.model;
 
 import lombok.Data;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Excel异步任务状态
  */
@@ -33,17 +31,17 @@ public class ExcelTaskStatus {
     /**
      * 已处理数量
      */
-    private AtomicInteger processed;
+    private int processed;
 
     /**
      * 成功数量
      */
-    private AtomicInteger successCount;
+    private int successCount;
 
     /**
      * 失败数量
      */
-    private AtomicInteger failCount;
+    private int failCount;
 
     /**
      * 进度百分比
@@ -82,9 +80,9 @@ public class ExcelTaskStatus {
         this.taskId = taskId;
         this.taskType = taskType;
         this.state = TaskState.PENDING;
-        this.processed = new AtomicInteger(0);
-        this.successCount = new AtomicInteger(0);
-        this.failCount = new AtomicInteger(0);
+        this.processed = 0;
+        this.successCount = 0;
+        this.failCount = 0;
         this.progress = 0;
         this.startTime = System.currentTimeMillis();
     }
@@ -93,24 +91,24 @@ public class ExcelTaskStatus {
         this.total = total;
         this.state = TaskState.RUNNING;
         if (total > 0) {
-            this.progress = (int) ((processed.get() * 100.0) / total);
+            this.progress = (int) ((processed * 100.0) / total);
         }
     }
 
-    public void incrementSuccess() {
-        this.successCount.incrementAndGet();
-        this.processed.incrementAndGet();
+    public synchronized void incrementSuccess() {
+        this.successCount++;
+        this.processed++;
     }
 
-    public void incrementFail() {
-        this.failCount.incrementAndGet();
-        this.processed.incrementAndGet();
+    public synchronized void incrementFail() {
+        this.failCount++;
+        this.processed++;
     }
 
     public void complete() {
         this.endTime = System.currentTimeMillis();
         this.progress = 100;
-        this.state = this.failCount.get() > 0 && this.successCount.get() == 0 ? TaskState.FAIL : TaskState.SUCCESS;
+        this.state = this.failCount > 0 && this.successCount == 0 ? TaskState.FAIL : TaskState.SUCCESS;
     }
 
     public void fail(String errorMsg) {
