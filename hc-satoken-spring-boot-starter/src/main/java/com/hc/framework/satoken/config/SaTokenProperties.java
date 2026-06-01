@@ -190,34 +190,6 @@ public class SaTokenProperties {
 
     // ==================== Token 清理配置 ====================
 
-    /**
-     * Token 清理配置
-     */
-    private TokenCleanConfig tokenClean = new TokenCleanConfig();
-
-    /**
-     * Token 清理配置类
-     */
-    @Data
-    public static class TokenCleanConfig {
-
-        /**
-         * 是否启用 Token 过期清理
-         */
-        private Boolean enabled = true;
-
-        /**
-         * 清理任务 Cron 表达式
-         * <p>默认每天凌晨 3 点执行</p>
-         */
-        private String cron = "0 0 3 * * ?";
-
-        /**
-         * 每次清理的批次大小
-         */
-        private Integer batchSize = 1000;
-    }
-
     // ==================== JWT 配置 ====================
 
     /**

@@ -3,6 +3,7 @@ package com.hc.framework.satoken.gateway.config;
 import cn.dev33.satoken.reactor.filter.SaReactorFilter;
 import com.hc.framework.satoken.gateway.filter.SaTokenGatewayFilter;
 import com.hc.framework.satoken.gateway.handler.SaGatewayDynamicRouteProvider;
+import com.hc.framework.satoken.gateway.handler.SaTokenGatewayErrorBuilder;
 import com.hc.framework.satoken.gateway.handler.SaTokenGatewayExceptionHandler;
 import com.hc.framework.satoken.gateway.properties.SaTokenGatewayProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +60,17 @@ import org.springframework.context.annotation.Bean;
 public class SaTokenGatewayAutoConfiguration {
 
     /**
+     * 网关错误响应构建器
+     *
+     * <p>将 Sa-Token 异常映射为统一的 Result JSON，支持通过配置自定义错误码和消息。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SaTokenGatewayErrorBuilder saTokenGatewayErrorBuilder(SaTokenGatewayProperties properties) {
+        return new SaTokenGatewayErrorBuilder(properties);
+    }
+
+    /**
      * Sa-Token 网关过滤器
      *
      * <p>核心过滤器，处理网关层的统一鉴权。</p>
@@ -72,11 +84,12 @@ public class SaTokenGatewayAutoConfiguration {
     @ConditionalOnMissingBean
     public SaTokenGatewayFilter saTokenGatewayFilter(
         SaTokenGatewayProperties properties,
+        SaTokenGatewayErrorBuilder errorBuilder,
         @Autowired(required = false) SaGatewayDynamicRouteProvider dynamicRouteProvider) {
         if (dynamicRouteProvider != null) {
             log.info("=== 动态路由权限提供者已启用，优先级高于配置文件 ===");
         }
-        return new SaTokenGatewayFilter(properties, dynamicRouteProvider);
+        return new SaTokenGatewayFilter(properties, errorBuilder, dynamicRouteProvider);
     }
 
     /**
@@ -96,12 +109,12 @@ public class SaTokenGatewayAutoConfiguration {
      * Sa-Token 网关全局异常处理器
      *
      * <p>统一处理 Sa-Token 相关异常，转换为框架统一的 Result 响应格式。</p>
-     * <p>支持自定义字段名（通过 hc.web.code-field 等配置）。</p>
      */
     @Bean
     @ConditionalOnMissingBean
-    public SaTokenGatewayExceptionHandler saTokenGatewayExceptionHandler() {
-        return new SaTokenGatewayExceptionHandler();
+    public SaTokenGatewayExceptionHandler saTokenGatewayExceptionHandler(
+            SaTokenGatewayErrorBuilder errorBuilder) {
+        return new SaTokenGatewayExceptionHandler(errorBuilder);
     }
 
     /**

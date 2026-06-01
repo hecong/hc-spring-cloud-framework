@@ -21,6 +21,7 @@ import java.util.List;
 public class SaTokenGatewayFilter {
 
     private final SaTokenGatewayProperties properties;
+    private final SaTokenGatewayErrorBuilder errorBuilder;
     private final SaGatewayDynamicRouteProvider dynamicRouteProvider;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -28,11 +29,14 @@ public class SaTokenGatewayFilter {
      * 构造器
      *
      * @param properties            网关配置属性
+     * @param errorBuilder          错误响应构建器
      * @param dynamicRouteProvider  动态路由提供者（可选）
      */
     public SaTokenGatewayFilter(SaTokenGatewayProperties properties,
+                                SaTokenGatewayErrorBuilder errorBuilder,
                                 SaGatewayDynamicRouteProvider dynamicRouteProvider) {
         this.properties = properties;
+        this.errorBuilder = errorBuilder;
         this.dynamicRouteProvider = dynamicRouteProvider;
     }
 
@@ -47,16 +51,17 @@ public class SaTokenGatewayFilter {
             .setAuth(obj -> {
                 // 1. 登录校验
                 StpUtil.checkLogin();
-                
+
                 // 2. 获取路径
                 String path = SaHolder.getRequest().getRequestPath();
-                
+
                 // 3. 执行鉴权（Sa-Token 会通过 StpInterface 获取权限数据）
                 doAuth(path);
             })
             .setError(e -> {
                 log.warn("网关鉴权异常: {}", e.getMessage());
-                return SaTokenGatewayErrorBuilder.buildErrorJson(e);
+                String path = SaHolder.getRequest().getRequestPath();
+                return errorBuilder.buildErrorJson(e, path);
             });
     }
 

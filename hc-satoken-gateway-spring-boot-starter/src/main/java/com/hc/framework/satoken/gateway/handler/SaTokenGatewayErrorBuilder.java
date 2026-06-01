@@ -8,6 +8,7 @@ import cn.dev33.satoken.exception.NotSafeException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hc.framework.common.model.Result;
+import com.hc.framework.satoken.gateway.properties.SaTokenGatewayProperties;
 
 import java.time.LocalDateTime;
 
@@ -17,133 +18,99 @@ import java.time.LocalDateTime;
  * <p>提供统一的错误响应构建能力，供 Filter 和 ExceptionHandler 共用。</p>
  * <p>使用 Jackson 序列化 {@link com.hc.framework.common.model.Result}，
  * 与 hc-web-spring-boot-starter 的 Result 格式完全一致（含 timestamp 和 path 字段）。</p>
+ * <p>错误码和错误消息可通过 {@code hc.satoken.gateway.error-response.*} 配置自定义。</p>
  *
  * @author hc-framework
  * @since 1.0.0
  */
 public class SaTokenGatewayErrorBuilder {
 
+    /** 默认未登录状态码 */
+    private static final int DEFAULT_NOT_LOGIN_CODE = 401;
+    /** 默认无权限状态码 */
+    private static final int DEFAULT_NO_PERMISSION_CODE = 403;
+    /** 默认账号封禁状态码 */
+    private static final int DEFAULT_ACCOUNT_DISABLED_CODE = 423;
+
     private static final ObjectMapper MAPPER = new ObjectMapper()
-        .registerModule(new JavaTimeModule());
+            .registerModule(new JavaTimeModule());
 
-    /**
-     * 未登录状态码
-     */
-    public static final int NOT_LOGIN_CODE = 401;
+    private final SaTokenGatewayProperties.ErrorResponse errorConfig;
 
-    /**
-     * 无权限状态码
-     */
-    public static final int NO_PERMISSION_CODE = 403;
+    public SaTokenGatewayErrorBuilder(SaTokenGatewayProperties properties) {
+        this.errorConfig = properties.getErrorResponse();
+    }
 
-    /**
-     * 账号被封禁状态码
-     */
-    public static final int ACCOUNT_DISABLED_CODE = 423;
+    // ---- 公共 API ----
 
     /**
      * 构建错误响应 JSON
-     *
-     * @param e 异常对象
-     * @return JSON 字符串
      */
-    public static String buildErrorJson(Throwable e) {
-        int code = getErrorCode(e);
-        String message = getErrorMessage(e);
-        return buildResultJson(code, message);
+    public String buildErrorJson(Throwable e) {
+        return buildResultJson(getErrorCode(e), getErrorMessage(e));
     }
 
     /**
      * 构建错误响应 JSON（指定请求路径）
-     *
-     * @param e    异常对象
-     * @param path 请求路径
-     * @return JSON 字符串
      */
-    public static String buildErrorJson(Throwable e, String path) {
-        int code = getErrorCode(e);
-        String message = getErrorMessage(e);
-        return buildResultJson(code, message, path);
+    public String buildErrorJson(Throwable e, String path) {
+        return buildResultJson(getErrorCode(e), getErrorMessage(e), path);
     }
 
     /**
-     * 获取错误状态码
-     *
-     * @param e 异常对象
-     * @return 状态码
+     * 获取错误状态码（优先使用配置值，fallback 到默认值）
      */
-    public static int getErrorCode(Throwable e) {
+    public int getErrorCode(Throwable e) {
         if (e instanceof NotLoginException) {
-            return NOT_LOGIN_CODE;
+            return errorConfig.getNotLoginCode() != null
+                    ? errorConfig.getNotLoginCode() : DEFAULT_NOT_LOGIN_CODE;
         }
         if (e instanceof NotPermissionException || e instanceof NotRoleException || e instanceof NotSafeException) {
-            return NO_PERMISSION_CODE;
+            return errorConfig.getNoPermissionCode() != null
+                    ? errorConfig.getNoPermissionCode() : DEFAULT_NO_PERMISSION_CODE;
         }
         if (e instanceof DisableServiceException) {
-            return ACCOUNT_DISABLED_CODE;
+            return DEFAULT_ACCOUNT_DISABLED_CODE;
         }
         return 500;
     }
 
     /**
-     * 获取错误消息
-     *
-     * @param e 异常对象
-     * @return 消息
+     * 获取错误消息（优先使用配置值，fallback 到内置中文消息）
      */
-    public static String getErrorMessage(Throwable e) {
+    public String getErrorMessage(Throwable e) {
         if (e instanceof NotLoginException) {
-            return getNotLoginMessage((NotLoginException) e);
+            return resolveNotLoginMessage((NotLoginException) e);
         }
-        if (e instanceof NotPermissionException npe) {
-            return "权限不足";
+        if (e instanceof NotPermissionException) {
+            return hasText(errorConfig.getNoPermissionMessage())
+                    ? errorConfig.getNoPermissionMessage() : "权限不足";
         }
-        if (e instanceof NotRoleException nre) {
-            return "角色权限不足";
+        if (e instanceof NotRoleException) {
+            return hasText(errorConfig.getNoPermissionMessage())
+                    ? errorConfig.getNoPermissionMessage() : "角色权限不足";
         }
         if (e instanceof DisableServiceException) {
             return "账号已被封禁，请联系管理员";
         }
         if (e instanceof NotSafeException) {
-            return "需要二次认证，请先完成安全验证";
+            return hasText(errorConfig.getNoPermissionMessage())
+                    ? errorConfig.getNoPermissionMessage() : "需要二次认证，请先完成安全验证";
         }
         return "认证服务异常";
     }
 
     /**
-     * 获取未登录的详细消息
-     */
-    private static String getNotLoginMessage(NotLoginException e) {
-        return switch (e.getType()) {
-            case NotLoginException.NOT_TOKEN -> "未提供登录凭证";
-            case NotLoginException.INVALID_TOKEN -> "登录凭证无效";
-            case NotLoginException.TOKEN_TIMEOUT -> "登录凭证已过期";
-            case NotLoginException.BE_REPLACED -> "账号已在其他设备登录";
-            case NotLoginException.KICK_OUT -> "账号已被踢下线";
-            default -> "未登录或登录已过期";
-        };
-    }
-
-    /**
      * 构建 Result JSON 字符串
-     *
-     * @param code    状态码
-     * @param message 消息
-     * @return JSON 字符串
      */
-    public static String buildResultJson(int code, String message) {
+    public String buildResultJson(int code, String message) {
         return buildResultJson(code, message, null);
     }
 
     /**
      * 构建 Result JSON 字符串（含请求路径）
-     *
-     * @param code    状态码
-     * @param message 消息
-     * @param path    请求路径
-     * @return JSON 字符串
      */
-    public static String buildResultJson(int code, String message, String path) {
+    public String buildResultJson(int code, String message, String path) {
         try {
             Result<Void> result = new Result<>();
             result.setCode(code);
@@ -155,8 +122,50 @@ public class SaTokenGatewayErrorBuilder {
             }
             return MAPPER.writeValueAsString(result);
         } catch (Exception e) {
-            // 序列化失败时的兜底
-            return "{\"code\":" + code + ",\"message\":\"" + message + "\",\"data\":null}";
+            // 序列化失败时的兜底，使用手动构建的 JSON
+            String escaped = escapeJson(message);
+            return "{\"code\":" + code + ",\"message\":\"" + escaped + "\",\"data\":null}";
         }
+    }
+
+    // ---- 私有辅助方法 ----
+
+    /**
+     * 解析未登录详细消息
+     */
+    private String resolveNotLoginMessage(NotLoginException e) {
+        // 如果配置了自定义消息，优先使用
+        if (hasText(errorConfig.getNotLoginMessage())) {
+            return errorConfig.getNotLoginMessage();
+        }
+        // 否则使用 Sa-Token 异常类型对应的内置消息
+        return switch (e.getType()) {
+            case NotLoginException.NOT_TOKEN -> "未提供登录凭证";
+            case NotLoginException.INVALID_TOKEN -> "登录凭证无效";
+            case NotLoginException.TOKEN_TIMEOUT -> "登录凭证已过期";
+            case NotLoginException.BE_REPLACED -> "账号已在其他设备登录";
+            case NotLoginException.KICK_OUT -> "账号已被踢下线";
+            default -> "未登录或登录已过期";
+        };
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    /**
+     * 转义 JSON 字符串中的特殊字符
+     */
+    private static String escapeJson(String str) {
+        if (str == null) {
+            return "";
+        }
+        return str.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }

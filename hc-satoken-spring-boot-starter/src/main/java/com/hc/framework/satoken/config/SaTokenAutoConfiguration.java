@@ -1,13 +1,11 @@
 package com.hc.framework.satoken.config;
 
-import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.stp.StpInterface;
 import com.hc.framework.redis.util.RedisCacheUtils;
 import com.hc.framework.satoken.handler.SaPermissionProvider;
 import com.hc.framework.satoken.handler.SaTokenAuthLogger;
 import com.hc.framework.satoken.handler.SaTokenExceptionHandler;
 import com.hc.framework.satoken.handler.SaTokenStpInterfaceImpl;
-import com.hc.framework.satoken.scheduler.SaTokenCleanScheduler;
 import com.hc.framework.satoken.service.SaJwtTokenService;
 import com.hc.framework.satoken.service.SaPermissionCacheService;
 import com.hc.framework.satoken.util.SaPasswordEncoder;
@@ -21,7 +19,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Sa-Token 自动配置类
@@ -86,7 +83,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(SaTokenProperties.class)
-@EnableScheduling
 @ConditionalOnProperty(prefix = "hc.satoken", name = "enabled", havingValue = "true", matchIfMissing = true)
 @Import({SaTokenWebMvcConfiguration.class, SaSsoAutoConfiguration.class, SaTokenCorsConfiguration.class})
 public class SaTokenAutoConfiguration {
@@ -135,22 +131,6 @@ public class SaTokenAutoConfiguration {
             log.warn("Sa-Token Cookie 安全提示：isReadCookie=true 但 isSecure=false，"
                     + "HTTP 下 Cookie 可能被中间人窃取。生产环境建议设置 hc.satoken.cookie.is-secure=true");
         }
-    }
-
-    // ==================== Token 存储与清理 ====================
-
-    /**
-     * Token 过期清理定时任务
-     *
-     * <p>定时清理 Redis 中的过期 Token 数据，释放存储空间。</p>
-     * <p>需要 Redis 环境支持。</p>
-     */
-    @Bean
-    @ConditionalOnBean(SaTokenDao.class)
-    @ConditionalOnProperty(prefix = "hc.satoken.token-clean", name = "enabled", havingValue = "true", matchIfMissing = true)
-    @ConditionalOnMissingBean
-    public SaTokenCleanScheduler saTokenCleanScheduler(SaTokenDao saTokenDao) {
-        return new SaTokenCleanScheduler(saTokenProperties, saTokenDao);
     }
 
     // ==================== JWT Token ====================

@@ -33,6 +33,12 @@ import java.nio.charset.StandardCharsets;
 @Order(-1)  // 高优先级，确保在默认异常处理器之前执行
 public class SaTokenGatewayExceptionHandler implements WebExceptionHandler {
 
+    private final SaTokenGatewayErrorBuilder errorBuilder;
+
+    public SaTokenGatewayExceptionHandler(SaTokenGatewayErrorBuilder errorBuilder) {
+        this.errorBuilder = errorBuilder;
+    }
+
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
         // 获取实际的 Sa-Token 异常（处理被包装的情况）
@@ -46,11 +52,11 @@ public class SaTokenGatewayExceptionHandler implements WebExceptionHandler {
         ServerHttpResponse response = exchange.getResponse();
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-        // 使用共享的 ErrorBuilder 构建响应（含请求路径）
-        int code = SaTokenGatewayErrorBuilder.getErrorCode(saTokenException);
+        // 使用 ErrorBuilder 构建响应（含请求路径和配置的错误码/消息）
+        int code = errorBuilder.getErrorCode(saTokenException);
         String path = exchange.getRequest().getPath().value();
-        String json = SaTokenGatewayErrorBuilder.buildResultJson(code,
-                SaTokenGatewayErrorBuilder.getErrorMessage(saTokenException), path);
+        String json = errorBuilder.buildResultJson(code,
+                errorBuilder.getErrorMessage(saTokenException), path);
 
         // 设置 HTTP 状态码
         response.setStatusCode(HttpStatus.valueOf(code));
