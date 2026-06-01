@@ -11,6 +11,8 @@ import com.alibaba.csp.sentinel.slots.block.flow.FlowRuleManager;
 import com.hc.framework.common.util.IpUtils;
 import com.hc.framework.logging.annotation.RateLimiter;
 import com.hc.framework.logging.config.LoggingProperties;
+import com.hc.framework.logging.spi.UserIdResolver;
+import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 接口限流切面
@@ -36,6 +41,13 @@ import java.util.List;
 public class RateLimiterAspect {
 
     private final LoggingProperties loggingProperties;
+
+    private final UserIdResolver userIdResolver;
+
+    /**
+     * 记录本切面注册的 Sentinel 资源名，用于在销毁时清理
+     */
+    private final Set<String> registeredResources = ConcurrentHashMap.newKeySet();
 
     /**
      * 切点：标注@RateLimiter的方法/类
@@ -139,17 +151,30 @@ public class RateLimiterAspect {
             List<FlowRule> existingRules = new ArrayList<>(FlowRuleManager.getRules());
             existingRules.add(rule);
             FlowRuleManager.loadRules(existingRules);
+            registeredResources.add(resourceName);
         }
     }
 
 
 
     /**
-     * 获取当前登录用户ID（需根据业务实现，示例返回null）
+     * 获取当前登录用户ID
+     *
+     * <p>通过 {@link UserIdResolver} SPI 获取，默认实现返回 null（匿名用户）。</p>
      */
     private String getCurrentUserId() {
-        // 示例：从Token/Session中获取用户ID
-        // 实际需替换为项目的用户上下文获取逻辑
-        return null;
+        return userIdResolver.getCurrentUserId();
+    }
+
+    /**
+     * Bean 销毁时清理本切面注册的 Sentinel 规则
+     */
+    @PreDestroy
+    public void cleanup() {
+        List<FlowRule> remaining = FlowRuleManager.getRules().stream()
+                .filter(r -> !registeredResources.contains(r.getResource()))
+                .collect(Collectors.toList());
+        FlowRuleManager.loadRules(remaining);
+        registeredResources.clear();
     }
 }

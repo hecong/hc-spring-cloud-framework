@@ -1,4 +1,4 @@
-package com.hc.framework.satoken.gateway.model;
+package com.hc.framework.common.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
@@ -9,19 +9,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 网关统一响应结果
+ * 统一响应结果
  *
- * <p>独立于 hc-web-spring-boot-starter 的 Result 类，避免 WebFlux 与 Servlet MVC 冲突。</p>
- * <p>结构与 web 模块的 Result 保持一致，确保前端解析兼容。</p>
- *
- * <p>字段说明：</p>
- * <ul>
- *   <li>code: 状态码（HTTP 状态码或业务状态码）</li>
- *   <li>message: 响应消息</li>
- *   <li>data: 响应数据</li>
- *   <li>timestamp: 响应时间戳</li>
- *   <li>path: 请求路径</li>
- * </ul>
+ * <p>所有模块共享的基础响应体，包含 code、message、data、timestamp、path 字段。</p>
+ * <p>hc-web-spring-boot-starter 中的 Result 继承此类并可通过 ResultSerializer 实现动态字段名。</p>
  *
  * @param <T> 数据类型
  * @author hc-framework

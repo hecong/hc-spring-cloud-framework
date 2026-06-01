@@ -46,9 +46,11 @@ public class SaTokenGatewayExceptionHandler implements WebExceptionHandler {
         ServerHttpResponse response = exchange.getResponse();
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-        // 使用共享的 ErrorBuilder 构建响应
+        // 使用共享的 ErrorBuilder 构建响应（含请求路径）
         int code = SaTokenGatewayErrorBuilder.getErrorCode(saTokenException);
-        String json = SaTokenGatewayErrorBuilder.buildErrorJson(saTokenException);
+        String path = exchange.getRequest().getPath().value();
+        String json = SaTokenGatewayErrorBuilder.buildResultJson(code,
+                SaTokenGatewayErrorBuilder.getErrorMessage(saTokenException), path);
 
         // 设置 HTTP 状态码
         response.setStatusCode(HttpStatus.valueOf(code));

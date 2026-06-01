@@ -15,9 +15,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import org.springframework.util.AntPathMatcher;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
@@ -30,6 +34,11 @@ import java.util.regex.Pattern;
 public class ApiLogAspect {
 
     private final LoggingProperties loggingProperties;
+
+    private final AntPathMatcher antPathMatcher = new AntPathMatcher();
+
+    /** 缓存已编译的脱敏正则 Pattern */
+    private final Map<String, Pattern> sanitizePatternCache = new ConcurrentHashMap<>();
 
     /**
      * 切点：所有Controller层方法
@@ -51,9 +60,9 @@ public class ApiLogAspect {
         HttpServletRequest request = attributes.getRequest();
         String uri = request.getRequestURI();
 
-        // 忽略指定路径的日志
+        // 忽略指定路径的日志（使用 AntPathMatcher 支持 **/? 等标准通配符）
         List<String> ignorePaths = loggingProperties.getIgnorePaths();
-        if (ignorePaths.stream().anyMatch(path -> Pattern.matches(path.replace("*", ".*"), uri))) {
+        if (ignorePaths.stream().anyMatch(path -> antPathMatcher.match(path, uri))) {
             return point.proceed();
         }
 
@@ -62,9 +71,14 @@ public class ApiLogAspect {
         String clientIp = IpUtils.getClientIp(request);
         String traceId = TraceIdUtils.getTraceId();
 
-        // 记录请求参数
+        // 记录请求参数（捕获序列化异常，避免 MultipartFile 等不可序列化参数导致请求失败）
         Object[] args = point.getArgs();
-        String params = sanitize(JSONUtil.toJsonStr(args));
+        String params;
+        try {
+            params = sanitize(JSONUtil.toJsonStr(args));
+        } catch (Exception e) {
+            params = "[unserializable:" + e.getClass().getSimpleName() + "]";
+        }
 
         Instant start = Instant.now();
         // 统一请求日志格式：[级别][TraceId][类型] 内容
@@ -84,14 +98,16 @@ public class ApiLogAspect {
             return result;
         } catch (Exception e) {
             long cost = Duration.between(start, Instant.now()).toMillis();
-            log.error("[ERROR][{}][API_EXCEPTION] method={}, uri={}, cost={}ms, exception={}",
-                traceId, method, uri, cost, e.getMessage(), e);
+            log.warn("[WARN][{}][API_EXCEPTION] method={}, uri={}, cost={}ms, exception={}",
+                traceId, method, uri, cost, e.getMessage());
             throw e;
         }
     }
 
     /**
      * 脱敏处理：将敏感参数名对应的值替换为 ***
+     *
+     * <p>使用缓存的预编译正则 Pattern，避免每次请求重复编译。</p>
      */
     private String sanitize(String json) {
         if (json == null || json.isEmpty()) {
@@ -103,10 +119,9 @@ public class ApiLogAspect {
         }
         String result = json;
         for (String name : sensitiveNames) {
-            // 匹配 "name":"value" 或 "name": "value" 模式（忽略大小写）
-            result = result.replaceAll(
-                    "(?i)(\"" + Pattern.quote(name) + "\"\\s*:\\s*)\"[^\"]*\"",
-                    "$1\"***\"");
+            Pattern pattern = sanitizePatternCache.computeIfAbsent(name,
+                    k -> Pattern.compile("(?i)(\"" + Pattern.quote(k) + "\"\\s*:\\s*)\"[^\"]*\""));
+            result = pattern.matcher(result).replaceAll("$1\"***\"");
         }
         return result;
     }

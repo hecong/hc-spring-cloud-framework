@@ -5,16 +5,26 @@ import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.NotPermissionException;
 import cn.dev33.satoken.exception.NotRoleException;
 import cn.dev33.satoken.exception.NotSafeException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.hc.framework.common.model.Result;
+
+import java.time.LocalDateTime;
 
 /**
  * Sa-Token 网关错误响应构建器
  *
  * <p>提供统一的错误响应构建能力，供 Filter 和 ExceptionHandler 共用。</p>
+ * <p>使用 Jackson 序列化 {@link com.hc.framework.common.model.Result}，
+ * 与 hc-web-spring-boot-starter 的 Result 格式完全一致（含 timestamp 和 path 字段）。</p>
  *
  * @author hc-framework
  * @since 1.0.0
  */
 public class SaTokenGatewayErrorBuilder {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+        .registerModule(new JavaTimeModule());
 
     /**
      * 未登录状态码
@@ -41,6 +51,19 @@ public class SaTokenGatewayErrorBuilder {
         int code = getErrorCode(e);
         String message = getErrorMessage(e);
         return buildResultJson(code, message);
+    }
+
+    /**
+     * 构建错误响应 JSON（指定请求路径）
+     *
+     * @param e    异常对象
+     * @param path 请求路径
+     * @return JSON 字符串
+     */
+    public static String buildErrorJson(Throwable e, String path) {
+        int code = getErrorCode(e);
+        String message = getErrorMessage(e);
+        return buildResultJson(code, message, path);
     }
 
     /**
@@ -109,28 +132,31 @@ public class SaTokenGatewayErrorBuilder {
      * @return JSON 字符串
      */
     public static String buildResultJson(int code, String message) {
-        StringBuilder json = new StringBuilder();
-        json.append("{");
-        json.append("\"code\":").append(code).append(",");
-        json.append("\"message\":\"").append(escapeJson(message)).append("\"");
-        json.append(",\"data\":null");
-        json.append("}");
-        return json.toString();
+        return buildResultJson(code, message, null);
     }
 
     /**
-     * 转义 JSON 字符串中的特殊字符
+     * 构建 Result JSON 字符串（含请求路径）
+     *
+     * @param code    状态码
+     * @param message 消息
+     * @param path    请求路径
+     * @return JSON 字符串
      */
-    private static String escapeJson(String str) {
-        if (str == null) {
-            return "";
+    public static String buildResultJson(int code, String message, String path) {
+        try {
+            Result<Void> result = new Result<>();
+            result.setCode(code);
+            result.setMessage(message);
+            result.setData(null);
+            result.setTimestamp(LocalDateTime.now());
+            if (path != null) {
+                result.setPath(path);
+            }
+            return MAPPER.writeValueAsString(result);
+        } catch (Exception e) {
+            // 序列化失败时的兜底
+            return "{\"code\":" + code + ",\"message\":\"" + message + "\",\"data\":null}";
         }
-        return str.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\b", "\\b")
-                .replace("\f", "\\f")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
     }
 }

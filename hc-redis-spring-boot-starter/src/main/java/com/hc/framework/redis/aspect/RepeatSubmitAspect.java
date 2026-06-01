@@ -1,5 +1,6 @@
 package com.hc.framework.redis.aspect;
 
+import com.hc.framework.common.exception.RepeatSubmitException;
 import com.hc.framework.redis.annotation.RepeatSubmit;
 import com.hc.framework.redis.constant.RedisKeyConstants;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class RepeatSubmitAspect {
             .setIfAbsent(redisKey, "1", repeatSubmit.expire(), TimeUnit.SECONDS);
 
         if (Boolean.FALSE.equals(success)) {
-            throw new RuntimeException(repeatSubmit.message());
+            throw new RepeatSubmitException(repeatSubmit.message());
         }
 
         // 3. 执行方法

@@ -1,17 +1,13 @@
 package com.hc.framework.web.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
 import org.springframework.http.HttpStatus;
 
 import java.io.Serial;
-import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
- * 统一响应结果
+ * Web 模块统一响应结果
  *
- * <p>该类作为数据载体，本身不包含序列化逻辑。</p>
+ * <p>继承自 {@link com.hc.framework.common.model.Result}，保持与框架其他模块的兼容性。</p>
  * <p>动态字段名配置由 {@link com.hc.framework.web.serializer.ResultSerializer} 处理，
  * 在 Jackson 序列化时动态替换字段名。</p>
  *
@@ -19,95 +15,67 @@ import java.time.LocalDateTime;
  * @author hc-framework
  * @since 1.0.0
  */
-@Data
-public class Result<T> implements Serializable {
+public class Result<T> extends com.hc.framework.common.model.Result<T> {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 状态码
-     */
-    private Integer code;
-
-    /**
-     * 响应消息
-     */
-    private String message;
-
-    /**
-     * 响应数据
-     */
-    private T data;
-
-    /**
-     * 时间戳
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime timestamp;
-
-    /**
-     * 请求路径
-     */
-    private String path;
-
     public Result() {
-        this.timestamp = LocalDateTime.now();
+        super();
     }
 
     public Result(Integer code, String message, T data) {
-        this();
-        this.code = code;
-        this.message = message;
-        this.data = data;
+        super(code, message, data);
     }
 
-    /**
-     * 创建成功响应（无数据）
-     */
+    // ---- 静态工厂方法（覆盖父类方法，返回 Web 模块的 Result 类型）----
+
     public static <T> Result<T> success() {
-        return new Result<>(HttpStatus.OK.value(), "操作成功", null);
+        Result<T> r = new Result<>();
+        r.setCode(HttpStatus.OK.value());
+        r.setMessage("操作成功");
+        return r;
     }
 
-    /**
-     * 创建成功响应（带数据）
-     */
     public static <T> Result<T> success(T data) {
-        return new Result<>(HttpStatus.OK.value(), "操作成功", data);
+        Result<T> r = new Result<>();
+        r.setCode(HttpStatus.OK.value());
+        r.setMessage("操作成功");
+        r.setData(data);
+        return r;
     }
 
-    /**
-     * 创建成功响应（自定义消息和数据）
-     */
     public static <T> Result<T> success(String message, T data) {
-        return new Result<>(HttpStatus.OK.value(), message, data);
+        Result<T> r = new Result<>();
+        r.setCode(HttpStatus.OK.value());
+        r.setMessage(message);
+        r.setData(data);
+        return r;
     }
 
-    /**
-     * 创建失败响应（默认错误码）
-     */
     public static <T> Result<T> error() {
-        return new Result<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), "操作失败", null);
+        Result<T> r = new Result<>();
+        r.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        r.setMessage("操作失败");
+        return r;
     }
 
-    /**
-     * 创建失败响应（自定义消息）
-     */
     public static <T> Result<T> error(String message) {
-        return new Result<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), message, null);
+        Result<T> r = new Result<>();
+        r.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        r.setMessage(message);
+        return r;
     }
 
-    /**
-     * 创建失败响应（自定义错误码和消息）
-     */
     public static <T> Result<T> error(Integer code, String message) {
-        return new Result<>(code, message, null);
+        Result<T> r = new Result<>();
+        r.setCode(code);
+        r.setMessage(message);
+        return r;
     }
 
-    /**
-     * 判断是否为成功响应
-     */
+    @Override
     public boolean isSuccess() {
-        return HttpStatus.OK.value() == this.code;
+        return HttpStatus.OK.value() == this.getCode();
     }
 }

@@ -5,6 +5,7 @@ import com.hc.framework.logging.aspect.RateLimiterAspect;
 import com.hc.framework.logging.interceptor.FeignTraceIdInterceptor;
 import com.hc.framework.logging.interceptor.RestTemplateTraceIdInterceptor;
 import com.hc.framework.logging.interceptor.TraceIdInterceptor;
+import com.hc.framework.logging.spi.UserIdResolver;
 import feign.Feign;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -37,13 +38,24 @@ public class LoggingAutoConfiguration {
     }
 
     /**
+     * 默认用户ID解析器（返回 null，即匿名用户）
+     *
+     * <p>业务项目可通过实现 {@link UserIdResolver} 并注册为 Bean 来覆盖此默认实现。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean(UserIdResolver.class)
+    public UserIdResolver userIdResolver() {
+        return () -> null;
+    }
+
+    /**
      * 限流切面
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "hc.logging.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public RateLimiterAspect rateLimiterAspect(LoggingProperties loggingProperties) {
-        return new RateLimiterAspect(loggingProperties);
+    public RateLimiterAspect rateLimiterAspect(LoggingProperties loggingProperties, UserIdResolver userIdResolver) {
+        return new RateLimiterAspect(loggingProperties, userIdResolver);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.hc.framework.web.exception;
 
+import com.hc.framework.common.exception.RepeatSubmitException;
 import com.hc.framework.web.model.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
@@ -24,6 +25,18 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 重复提交异常
+     */
+    @ExceptionHandler(RepeatSubmitException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public Result<Void> handleRepeatSubmitException(RepeatSubmitException e, HttpServletRequest request) {
+        log.warn("重复提交: {}", e.getMessage());
+        Result<Void> result = Result.error(RepeatSubmitException.HTTP_CODE, e.getMessage());
+        result.setPath(request.getRequestURI());
+        return result;
+    }
 
     /**
      * 业务异常
@@ -133,19 +146,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 空指针异常
-     */
-    @ExceptionHandler(NullPointerException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Result<Void> handleNullPointerException(NullPointerException e, HttpServletRequest request) {
-        log.error("空指针异常", e);
-        Result<Void> result = Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "系统繁忙，请稍后重试");
-        result.setPath(request.getRequestURI());
-        return result;
-    }
-
-    /**
-     * 其他所有异常
+     * 其他所有异常（含 NullPointerException 等未明确处理的异常）
      */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -47,7 +47,6 @@ import org.springframework.context.annotation.Bean;
  *       forward-token: true
  * }</pre>
  *
- *
  * @author hc-framework
  * @since 1.0.0
  */
@@ -58,47 +57,6 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnClass(name = "org.springframework.cloud.gateway.filter.GlobalFilter")
 @ConditionalOnProperty(prefix = "hc.satoken.gateway", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SaTokenGatewayAutoConfiguration {
-
-    private final SaTokenGatewayProperties properties;
-
-    /**
-     * 构造器注入
-     *
-     * @param properties 网关配置属性
-     */
-    public SaTokenGatewayAutoConfiguration(SaTokenGatewayProperties properties) {
-        this.properties = properties;
-    }
-
-//    // 权限加载器
-//    @Bean
-//    public SaTokenGatewayStpInterface saTokenGatewayStpInterface(SaGatewayPermissionProvider provider) {
-//        return new SaTokenGatewayStpInterface(provider);
-//    }
-
-
-//    /**
-//     * 默认权限提供者（空实现）
-//     *
-//     * <p>当业务项目没有提供 SaGatewayPermissionProvider 实现时，使用此默认实现。</p>
-//     * <p>返回空的角色和权限列表，适用于仅需要登录认证的场景。</p>
-//     */
-//    @Bean
-//    @ConditionalOnMissingBean(SaGatewayPermissionProvider.class)
-//    public SaGatewayPermissionProvider defaultSaGatewayPermissionProvider() {
-//        log.warn("未配置 SaGatewayPermissionProvider，使用默认空实现（仅支持登录认证）");
-//        return new SaGatewayPermissionProvider() {
-//            @Override
-//            public Mono<List<String>> getRoles(Object loginId) {
-//                return Mono.just(Collections.emptyList());
-//            }
-//
-//            @Override
-//            public Mono<java.util.List<String>> getPermissions(Object loginId) {
-//                return Mono.just(Collections.emptyList());
-//            }
-//        };
-//    }
 
     /**
      * Sa-Token 网关过滤器

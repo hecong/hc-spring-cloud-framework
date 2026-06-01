@@ -60,7 +60,7 @@ public class LockTemplate {
     /**
      * 基于RedissonClient的分布式锁。自动续期、可重入锁
      * @param lockKey 锁的key值
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param action 业务方法接口实现
      */
     @Nullable
@@ -71,7 +71,7 @@ public class LockTemplate {
     /**
      * 基于RedissonClient的分布式锁。自动续期、可重入锁
      * @param lockKey 锁的key值
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param action 业务方法接口实现
      */
     public void execute(String lockKey, String errorMsg, Runnable action) {
@@ -81,7 +81,7 @@ public class LockTemplate {
     /**
      * 基于RedissonClient的分布式锁。自动续期、可重入锁
      * @param lockKey 锁的key值
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
      */
@@ -92,7 +92,7 @@ public class LockTemplate {
     /**
      * 基于RedissonClient的分布式锁。自动续期、可重入锁
      * @param lockKey 锁的key值
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
      */
@@ -117,7 +117,7 @@ public class LockTemplate {
      * 基于RedissonClient的分布式锁。自动续期、可重入锁
      * @param lockKey 锁的key值
      * @param waitTime 获取锁等待时间
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param action 业务方法接口实现
      */
     @Nullable
@@ -130,7 +130,7 @@ public class LockTemplate {
      * 基于RedissonClient的分布式锁
      * @param lockKey 锁的key值
      * @param waitTime 获取锁等待时间
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param leaseTime 锁释放时间
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
@@ -144,7 +144,7 @@ public class LockTemplate {
      * 基于RedissonClient的分布式锁
      * @param lockKey 锁的key值
      * @param waitTime 获取锁等待时间
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param leaseTime 锁释放时间
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
@@ -157,7 +157,7 @@ public class LockTemplate {
      * 基于RedissonClient的分布式锁
      * @param lockKey 锁的key值
      * @param waitTime 获取锁等待时间
-     * @param errorMsg 获取锁超时，抛出ServiceException异常信息
+     * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param leaseTime 锁释放时间
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
