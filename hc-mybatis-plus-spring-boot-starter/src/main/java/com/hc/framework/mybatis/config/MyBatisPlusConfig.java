@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.hc.framework.common.spi.UserIdProvider;
 import com.hc.framework.mybatis.handler.DefaultMetaObjectHandler;
 import com.hc.framework.mybatis.properties.MyBatisPlusProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -38,20 +39,36 @@ public class MyBatisPlusConfig {
         // 分页插件
         if (properties.getPage().isEnabled()) {
             PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor();
-            paginationInterceptor.setDbType(DbType.MYSQL);
+            paginationInterceptor.setDbType(DbType.getDbType(properties.getDbType()));
             paginationInterceptor.setMaxLimit(properties.getPage().getMaxLimit());
             paginationInterceptor.setOverflow(properties.getPage().getOverflow());
             interceptor.addInnerInterceptor(paginationInterceptor);
-            log.info("MyBatis-Plus 分页插件已启用");
+            log.info("MyBatis-Plus 分页插件已启用，数据库类型: {}", properties.getDbType());
         }
 
         // 乐观锁插件
-        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
+        if (properties.isOptimisticLockerEnabled()) {
+            interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
+        }
 
         // 防止全表更新与删除插件
-        interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        if (properties.isBlockAttackEnabled()) {
+            interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+        }
 
         return interceptor;
+    }
+
+    /**
+     * 默认用户ID提供者（返回空字符串，安全写入 NOT NULL 列）
+     *
+     * <p>业务项目可提供自己的 {@link UserIdProvider} Bean 来覆盖此默认实现。</p>
+     * <p>引入 hc-satoken-spring-boot-starter 后会自动创建基于 StpUtil 的实现，无需手动配置。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public UserIdProvider userIdProvider() {
+        return () -> "";
     }
 
     /**
@@ -61,7 +78,7 @@ public class MyBatisPlusConfig {
      */
     @Bean
     @ConditionalOnMissingBean
-    public MetaObjectHandler metaObjectHandler() {
-        return new DefaultMetaObjectHandler();
+    public MetaObjectHandler metaObjectHandler(UserIdProvider userIdProvider) {
+        return new DefaultMetaObjectHandler(userIdProvider);
     }
 }

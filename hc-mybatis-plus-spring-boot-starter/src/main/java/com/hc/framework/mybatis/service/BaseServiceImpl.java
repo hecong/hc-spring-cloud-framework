@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hc.framework.mybatis.model.PageData;
 import com.hc.framework.mybatis.model.PageParam;
 
+import java.util.List;
+
 /**
  * 基础 Service 实现类
  * <p>
@@ -28,5 +30,23 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T> extends Servic
     public PageData<T> pageResult(PageParam pageParam, Wrapper<T> queryWrapper) {
         IPage<T> page = page(pageParam.toPage(), queryWrapper);
         return PageData.of(page);
+    }
+
+    @Override
+    public int insertBatch(List<T> list) {
+        if (list != null && !list.isEmpty()) {
+            saveBatch(list);
+            return list.size();
+        }
+        return 0;
+    }
+
+    @Override
+    public int insertOrUpdateBatch(List<T> list) {
+        if (list != null && !list.isEmpty()) {
+            saveOrUpdateBatch(list);
+            return list.size();
+        }
+        return 0;
     }
 }

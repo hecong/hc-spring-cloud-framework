@@ -19,7 +19,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @AutoConfiguration
 @ConditionalOnClass(DynamicDataSourceContextHolder.class)
 @EnableConfigurationProperties(MyBatisPlusProperties.class)
-@ConditionalOnProperty(prefix = "hc.mybatis-plus.dynamic-data-source", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "hc.mybatis-plus.dynamic-data-source", name = "enabled", havingValue = "true")
 public class DynamicDataSourceConfig {
 
     /**

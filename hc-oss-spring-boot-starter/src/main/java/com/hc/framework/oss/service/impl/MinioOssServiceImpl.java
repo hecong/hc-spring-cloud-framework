@@ -11,6 +11,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
+import java.nio.charset.StandardCharsets;
+import java.net.URLEncoder;
 import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 
@@ -37,10 +39,14 @@ public class MinioOssServiceImpl implements OssService {
     }
 
     @PreDestroy
-    public void destroy() throws Exception {
+    public void destroy() {
         if (minioClient != null) {
-            minioClient.close();
-            log.info("MinIO客户端已关闭");
+            try {
+                minioClient.close();
+                log.info("MinIO客户端已关闭");
+            } catch (Exception e) {
+                log.warn("MinIO客户端关闭异常", e);
+            }
         }
     }
 
@@ -92,7 +98,16 @@ public class MinioOssServiceImpl implements OssService {
 
     @Override
     public String getUrl(String fileName) {
-        return config.getEndpoint() + "/" + config.getBucketName() + "/" + fileName;
+        return config.getEndpoint() + "/" + config.getBucketName() + "/" + encodeUrlPath(fileName);
+    }
+
+    /**
+     * 对 URL 路径做分段编码，保留 / 分隔符
+     */
+    private static String encodeUrlPath(String path) {
+        return java.util.Arrays.stream(path.split("/"))
+                .map(segment -> URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"))
+                .collect(java.util.stream.Collectors.joining("/"));
     }
 
     @Override
@@ -123,6 +138,7 @@ public class MinioOssServiceImpl implements OssService {
             );
             return true;
         } catch (Exception e) {
+            log.error("MinIO检查文件存在性失败: {}", fileName, e);
             return false;
         }
     }

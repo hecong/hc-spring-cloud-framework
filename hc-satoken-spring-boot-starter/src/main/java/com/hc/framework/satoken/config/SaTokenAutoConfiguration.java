@@ -85,7 +85,8 @@ import org.springframework.context.annotation.Import;
 @AutoConfiguration
 @EnableConfigurationProperties(SaTokenProperties.class)
 @ConditionalOnProperty(prefix = "hc.satoken", name = "enabled", havingValue = "true", matchIfMissing = true)
-@Import({SaTokenWebMvcConfiguration.class, SaSsoAutoConfiguration.class, SaTokenCorsConfiguration.class})
+@Import({SaTokenWebMvcConfiguration.class, SaSsoAutoConfiguration.class, SaTokenCorsConfiguration.class,
+         SaTokenUserIdProviderConfiguration.class})
 public class SaTokenAutoConfiguration {
 
     private final SaTokenProperties saTokenProperties;

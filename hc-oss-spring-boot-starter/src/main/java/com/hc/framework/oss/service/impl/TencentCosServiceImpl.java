@@ -15,7 +15,11 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
@@ -84,7 +88,7 @@ public class TencentCosServiceImpl implements OssService {
     /**
      * 从域名中提取主机部分
      *
-     * @param domain 完整域名（如：<a href="https://cdn.example.com">...</a>）
+     * @param domain 完整域名（如：https://cdn.example.com）
      * @return 主机部分（如：cdn.example.com）
      */
     private String extractHost(String domain) {
@@ -92,25 +96,9 @@ public class TencentCosServiceImpl implements OssService {
             return null;
         }
         try {
-            // 移除协议前缀
-            String host = domain.trim();
-            if (host.startsWith("http://")) {
-                host = host.substring(7);
-            } else if (host.startsWith("https://")) {
-                host = host.substring(8);
-            }
-            // 移除路径部分
-            int slashIndex = host.indexOf('/');
-            if (slashIndex > 0) {
-                host = host.substring(0, slashIndex);
-            }
-            // 移除端口号
-            int portIndex = host.indexOf(':');
-            if (portIndex > 0) {
-                host = host.substring(0, portIndex);
-            }
-            return host.isBlank() ? null : host;
-        } catch (Exception e) {
+            String host = new URI(domain.trim()).getHost();
+            return (host != null && !host.isBlank()) ? host : null;
+        } catch (URISyntaxException e) {
             log.warn("解析自定义域名失败: {}", domain, e);
             return null;
         }
@@ -169,17 +157,24 @@ public class TencentCosServiceImpl implements OssService {
         // 如果配置了自定义域名，返回自定义域名的URL
         if (config.getDomain() != null && !config.getDomain().isBlank()) {
             String domain = config.getDomain().trim();
-            // 确保域名以 / 结尾
             if (!domain.endsWith("/")) {
                 domain = domain + "/";
             }
-            // 确保文件名不以 / 开头
             String key = fileName.startsWith("/") ? fileName.substring(1) : fileName;
-            return domain + key;
+            return domain + encodeUrlPath(key);
         }
         // 否则返回COS默认域名URL
         return String.format("https://%s.cos.%s.myqcloud.com/%s",
-                config.getBucketName(), config.getRegion(), fileName);
+                config.getBucketName(), config.getRegion(), encodeUrlPath(fileName));
+    }
+
+    /**
+     * 对 URL 路径做分段编码，保留 / 分隔符
+     */
+    private static String encodeUrlPath(String path) {
+        return java.util.Arrays.stream(path.split("/"))
+                .map(segment -> URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"))
+                .collect(java.util.stream.Collectors.joining("/"));
     }
 
     @Override

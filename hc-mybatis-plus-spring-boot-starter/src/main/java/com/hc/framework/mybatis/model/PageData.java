@@ -26,8 +26,9 @@ public class PageData<T> implements Serializable {
         this.total = total;
         this.pageNum = pageNum;
         this.pageSize = pageSize;
-        this.totalPage = (int) Math.ceil((double) total / pageSize);
-        this.hasNext = (long) pageNum * pageSize < total;
+        this.totalPage = (pageSize != null && pageSize > 0)
+                ? (int) Math.ceil((double) total / pageSize) : 0;
+        this.hasNext = (pageSize != null && pageSize > 0) && (long) pageNum * pageSize < total;
     }
 
     // 【核心工具方法】从 MyBatis-Plus IPage 快速构建 PageData

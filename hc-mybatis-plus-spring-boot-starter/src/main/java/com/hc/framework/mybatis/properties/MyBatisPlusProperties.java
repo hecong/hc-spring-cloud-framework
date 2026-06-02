@@ -28,6 +28,21 @@ public class MyBatisPlusProperties {
     private DynamicDataSourceConfig dynamicDataSource = new DynamicDataSourceConfig();
 
     /**
+     * 数据库类型（默认 MYSQL，可选：POSTGRE_SQL、ORACLE、SQL_SERVER 等）
+     */
+    private String dbType = "MYSQL";
+
+    /**
+     * 是否启用乐观锁拦截器
+     */
+    private boolean optimisticLockerEnabled = true;
+
+    /**
+     * 是否启用防全表更新/删除拦截器
+     */
+    private boolean blockAttackEnabled = true;
+
+    /**
      * 分页配置
      */
     @Data

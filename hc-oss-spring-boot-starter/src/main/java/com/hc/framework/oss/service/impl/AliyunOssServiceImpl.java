@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
@@ -96,9 +98,18 @@ public class AliyunOssServiceImpl implements OssService {
     @Override
     public String getUrl(String fileName) {
         if (config.getDomain() != null && !config.getDomain().isEmpty()) {
-            return config.getDomain() + "/" + fileName;
+            return config.getDomain() + "/" + encodeUrlPath(fileName);
         }
-        return "https://" + config.getBucketName() + "." + config.getEndpoint() + "/" + fileName;
+        return "https://" + config.getBucketName() + "." + config.getEndpoint() + "/" + encodeUrlPath(fileName);
+    }
+
+    /**
+     * 对 URL 路径做分段编码，保留 / 分隔符
+     */
+    private static String encodeUrlPath(String path) {
+        return java.util.Arrays.stream(path.split("/"))
+                .map(segment -> URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"))
+                .collect(java.util.stream.Collectors.joining("/"));
     }
 
     @Override

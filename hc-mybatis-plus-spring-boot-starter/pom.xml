@@ -28,6 +28,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
+        <!-- Validation（@Min/@Max/@NotNull） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
         <!-- Jakarta Servlet API -->
         <dependency>
             <groupId>jakarta.servlet</groupId>
@@ -88,12 +93,6 @@
             <groupId>org.testcontainers</groupId>
             <artifactId>mysql</artifactId>
             <scope>test</scope>
-        </dependency>
-        <!-- hc-web -->
-        <dependency>
-            <groupId>com.hnhegui.framework</groupId>
-            <artifactId>hc-web-spring-boot-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- MyBatis-Plus 代码生成器 -->
         <dependency>

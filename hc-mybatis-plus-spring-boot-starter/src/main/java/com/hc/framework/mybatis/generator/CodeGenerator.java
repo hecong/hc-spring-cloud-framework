@@ -3,6 +3,8 @@ package com.hc.framework.mybatis.generator;
 import com.baomidou.mybatisplus.generator.FastAutoGenerator;
 import com.baomidou.mybatisplus.generator.config.OutputFile;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
+
+import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -108,7 +110,7 @@ public class CodeGenerator {
                                 .mapper("mapper")
                                 .xml("mapper.xml")
                                 .pathInfo(Collections.singletonMap(OutputFile.xml,
-                                        outputDir.replace("/java", "/resources/mapper")));
+                                        Path.of(outputDir).getParent().resolve("resources/mapper").toString()));
                     })
                     // 策略配置
                     .strategyConfig(builder -> {
