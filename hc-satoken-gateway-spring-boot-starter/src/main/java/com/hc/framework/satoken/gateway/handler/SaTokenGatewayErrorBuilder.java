@@ -66,8 +66,7 @@ public class SaTokenGatewayErrorBuilder {
                     ? errorConfig.getNotLoginCode() : DEFAULT_NOT_LOGIN_CODE;
         }
         if (e instanceof NotPermissionException || e instanceof NotRoleException || e instanceof NotSafeException) {
-            return errorConfig.getNoPermissionCode() != null
-                    ? errorConfig.getNoPermissionCode() : DEFAULT_NO_PERMISSION_CODE;
+            return DEFAULT_NO_PERMISSION_CODE;
         }
         if (e instanceof DisableServiceException) {
             return DEFAULT_ACCOUNT_DISABLED_CODE;
@@ -83,19 +82,16 @@ public class SaTokenGatewayErrorBuilder {
             return resolveNotLoginMessage((NotLoginException) e);
         }
         if (e instanceof NotPermissionException) {
-            return hasText(errorConfig.getNoPermissionMessage())
-                    ? errorConfig.getNoPermissionMessage() : "权限不足";
+            return "权限不足";
         }
         if (e instanceof NotRoleException) {
-            return hasText(errorConfig.getNoPermissionMessage())
-                    ? errorConfig.getNoPermissionMessage() : "角色权限不足";
+            return "角色权限不足";
         }
         if (e instanceof DisableServiceException) {
             return "账号已被封禁，请联系管理员";
         }
         if (e instanceof NotSafeException) {
-            return hasText(errorConfig.getNoPermissionMessage())
-                    ? errorConfig.getNoPermissionMessage() : "需要二次认证，请先完成安全验证";
+            return "需要二次认证，请先完成安全验证";
         }
         return "认证服务异常";
     }

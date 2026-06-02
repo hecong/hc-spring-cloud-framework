@@ -134,13 +134,13 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 非法状态异常
+     * 非法状态异常（服务端内部状态错误）
      */
     @ExceptionHandler(IllegalStateException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleIllegalStateException(IllegalStateException e, HttpServletRequest request) {
-        log.warn("非法状态: {}", e.getMessage());
-        Result<Void> result = Result.error(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+        log.error("非法状态异常", e);
+        Result<Void> result = Result.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "系统繁忙，请稍后重试");
         result.setPath(request.getRequestURI());
         return result;
     }

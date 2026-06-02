@@ -1,6 +1,5 @@
 package com.hc.framework.rocketmq.util;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -14,19 +13,21 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>使用方式：</p>
  * <pre>{@code
- * // 检查是否已消费
- * if (idempotentUtils.isConsumed(msgId)) {
- *     return; // 已消费，直接返回
+ * // 尝试原子标记（首次消费返回 true，重复消息返回 false）
+ * if (!idempotentUtils.tryMarkConsumed(msgId, 24, TimeUnit.HOURS)) {
+ *     return ConsumeResult.SUCCESS; // 已消费，幂等跳过
  * }
- *
- * // 标记为已消费（设置过期时间）
- * idempotentUtils.markConsumed(msgId, 1, TimeUnit.DAYS);
+ * try {
+ *     doConsume(data);
+ * } catch (Exception e) {
+ *     idempotentUtils.remove(msgId); // 失败时清除标记，允许重试
+ *     throw e;
+ * }
  * }</pre>
  *
  * @author hc-framework
  */
 @Slf4j
-@RequiredArgsConstructor
 public class IdempotentUtils {
 
     /**
@@ -43,69 +44,52 @@ public class IdempotentUtils {
     private RedisTemplate<String, Object> redisTemplate;
 
     /**
-     * 检查消息是否已消费（使用默认过期时间）
+     * 只读检查消息是否已消费（不写入 Redis）
      *
      * @param msgId 消息唯一标识
-     * @return true 表示已消费，false 表示未消费
+     * @return true 表示已消费
      */
     public boolean isConsumed(String msgId) {
-        return isConsumed(msgId, DEFAULT_EXPIRE_HOURS, TimeUnit.HOURS);
-    }
-
-    /**
-     * 检查消息是否已消费
-     *
-     * <p>如果 Redis 未配置，则直接返回 false（不进行幂等控制）</p>
-     *
-     * @param msgId    消息唯一标识
-     * @param timeout  过期时间
-     * @param timeUnit 时间单位
-     * @return true 表示已消费，false 表示未消费
-     */
-    public boolean isConsumed(String msgId, long timeout, TimeUnit timeUnit) {
         if (redisTemplate == null) {
-            log.warn("Redis 未配置，跳过幂等检查");
             return false;
         }
-
-        String key = buildKey(msgId);
-        Boolean exists = redisTemplate.hasKey(key);
-        if (exists) {
-            log.warn("消息重复消费: msgId={}", msgId);
-            return true;
-        }
-
-        // 使用 setIfAbsent 原子操作设置，防止并发问题
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "1", timeout, timeUnit);
-        return !Boolean.TRUE.equals(success);
+        return redisTemplate.hasKey(buildKey(msgId));
     }
 
     /**
-     * 标记消息为已消费（使用默认过期时间）
+     * 原子性尝试标记消息为已消费（检查并写入，单次 Redis 往返）
      *
-     * @param msgId 消息唯一标识
-     */
-    public void markConsumed(String msgId) {
-        markConsumed(msgId, DEFAULT_EXPIRE_HOURS, TimeUnit.HOURS);
-    }
-
-    /**
-     * 标记消息为已消费
+     * <p>使用 {@code setIfAbsent} 保证并发安全：只有第一个到达的请求能成功标记。</p>
      *
      * @param msgId    消息唯一标识
      * @param timeout  过期时间
      * @param timeUnit 时间单位
+     * @return true=首次消费（标记成功），false=重复消费（已存在标记）
      */
-    public void markConsumed(String msgId, long timeout, TimeUnit timeUnit) {
+    public boolean tryMarkConsumed(String msgId, long timeout, TimeUnit timeUnit) {
         if (redisTemplate == null) {
-            return;
+            log.warn("Redis 未配置，跳过幂等检查");
+            return true; // 无 Redis 时放行
         }
+
         String key = buildKey(msgId);
-        redisTemplate.opsForValue().set(key, "1", timeout, timeUnit);
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "1", timeout, timeUnit);
+        if (Boolean.TRUE.equals(success)) {
+            return true; // 首次消费
+        }
+        log.warn("消息重复消费: msgId={}", msgId);
+        return false; // 已存在标记
     }
 
     /**
-     * 删除幂等标记
+     * 原子性尝试标记消息为已消费（使用默认 24 小时过期）
+     */
+    public boolean tryMarkConsumed(String msgId) {
+        return tryMarkConsumed(msgId, DEFAULT_EXPIRE_HOURS, TimeUnit.HOURS);
+    }
+
+    /**
+     * 删除幂等标记（业务失败时调用，允许消息重试）
      *
      * @param msgId 消息唯一标识
      */
@@ -113,18 +97,10 @@ public class IdempotentUtils {
         if (redisTemplate == null) {
             return;
         }
-        String key = buildKey(msgId);
-        redisTemplate.delete(key);
+        redisTemplate.delete(buildKey(msgId));
     }
 
-    /**
-     * 构建 Redis key
-     *
-     * @param msgId 消息唯一标识
-     * @return Redis key
-     */
     private String buildKey(String msgId) {
         return IDEMPOTENT_KEY_PREFIX + msgId;
     }
-
 }

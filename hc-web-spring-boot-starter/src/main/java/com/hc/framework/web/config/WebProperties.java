@@ -41,7 +41,7 @@ public class WebProperties {
     /**
      * 是否开启XSS防护（默认开启）
      */
-    private boolean xssEnabled = true;
+    private Boolean xssEnabled = true;
 
     /**
      * XSS 放行路径（富文本/编辑器等）

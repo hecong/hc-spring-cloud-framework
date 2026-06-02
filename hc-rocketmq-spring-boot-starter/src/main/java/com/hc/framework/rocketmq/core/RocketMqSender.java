@@ -9,10 +9,10 @@ import org.apache.rocketmq.client.apis.producer.Transaction;
 import org.apache.rocketmq.client.common.Pair;
 import org.apache.rocketmq.client.core.RocketMQClientTemplate;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -36,11 +36,17 @@ import java.util.concurrent.TimeUnit;
  * @author hc-framework
  */
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class RocketMqSender {
 
     private final RocketMQClientTemplate rocketMQClientTemplate;
+
+    /**
+     * 所有 RocketMQClientTemplate Bean（Spring 自动按 beanName 收集）
+     *
+     * <p>用于事务消息指定不同 Checker 的场景：key=beanName，value=Template 实例。</p>
+     */
+    private final Map<String, RocketMQClientTemplate> templateMap;
 
     /**
      * 异步发送线程池（有界队列 + CallerRunsPolicy 防止 OOM）
@@ -207,8 +213,10 @@ public class RocketMqSender {
      * @param tag      标签
      * @param dataList 业务数据列表
      */
-    public void sendBatch(String topic, String tag, Collection<?> dataList) {
-        String destination = buildDestination(topic, tag);
+    public int sendBatch(String topic, String tag, Collection<?> dataList) {
+        if (dataList == null || dataList.isEmpty()) {
+            return 0;
+        }
         log.info("[RocketMQ] 发送批量消息 topic:{} tag:{} size:{}", topic, tag, dataList.size());
         int successCount = 0;
         for (Object data : dataList) {
@@ -220,6 +228,7 @@ public class RocketMqSender {
             }
         }
         log.info("[RocketMQ] 批量消息发送完成，成功 {}/{}", successCount, dataList.size());
+        return successCount;
     }
 
     /**
@@ -227,9 +236,10 @@ public class RocketMqSender {
      *
      * @param topic    主题
      * @param dataList 业务数据列表
+     * @return 成功发送的消息数
      */
-    public void sendBatch(String topic, Collection<?> dataList) {
-        sendBatch(topic, "*", dataList);
+    public int sendBatch(String topic, Collection<?> dataList) {
+        return sendBatch(topic, "*", dataList);
     }
 
     // ====================== 5. 异步消息 ======================
@@ -329,15 +339,55 @@ public class RocketMqSender {
      * @param data  业务数据
      * @return TransactionResult 包含 SendReceipt 和 Transaction
      */
+    /**
+     * 发送事务消息（使用默认 Template，适用于单 Checker 场景）
+     */
     public TransactionResult sendTransaction(String topic, String tag, Object data) {
+        return sendTransaction(rocketMQClientTemplate, topic, tag, data);
+    }
+
+    /**
+     * 发送事务消息（指定 Template Bean 名称，适用于多 Checker 场景）
+     *
+     * <p>templateBeanName 需与 Checker 上
+     * {@code @RocketMQTransactionListener(rocketMQTemplateBeanName = "xxx")} 的值一致。</p>
+     *
+     * <pre>{@code
+     * // 发送时指定模板名
+     * rocketMqSender.sendTransaction("orderPayRocketMQClientTemplate", "OrderTopic", "paid", order);
+     *
+     * // Checker 上写对应的模板名
+     * @RocketMQTransactionListener(rocketMQTemplateBeanName = "orderPayRocketMQClientTemplate")
+     * public class OrderPayChecker extends BaseTransactionChecker { ... }
+     * }</pre>
+     *
+     * @param templateBeanName RocketMQClientTemplate 的 Bean 名称
+     * @param topic            主题
+     * @param tag              标签
+     * @param data             业务数据
+     * @return TransactionResult 包含 SendReceipt 和 Transaction
+     * @throws IllegalArgumentException 如果指定名称的 Template 不存在
+     */
+    public TransactionResult sendTransaction(String templateBeanName,
+            String topic, String tag, Object data) {
+        RocketMQClientTemplate template = templateMap.get(templateBeanName);
+        if (template == null) {
+            throw new IllegalArgumentException(
+                    "未找到 RocketMQ Template Bean: " + templateBeanName
+                    + "。请检查 @RocketMQTransactionListener 的 rocketMQTemplateBeanName 是否与此处一致。"
+                    + " 可用 Template: " + templateMap.keySet());
+        }
+        return sendTransaction(template, topic, tag, data);
+    }
+
+    private TransactionResult sendTransaction(RocketMQClientTemplate template,
+            String topic, String tag, Object data) {
         BaseMqMessage msg = build(data);
         String destination = buildDestination(topic, tag);
         try {
             log.info("[RocketMQ] 发送事务消息 topic:{} tag:{} msgId:{}",
                     topic, tag, msg.getMsgId());
-            // RocketMQ 5.x gRPC 版本的事务消息 API
-            // 返回 Pair<SendReceipt, Transaction>
-            Pair<SendReceipt, Transaction> pair = rocketMQClientTemplate.sendTransactionMessage(
+            Pair<SendReceipt, Transaction> pair = template.sendTransactionMessage(
                     destination,
                     MessageBuilder.withPayload(msg).build()
             );

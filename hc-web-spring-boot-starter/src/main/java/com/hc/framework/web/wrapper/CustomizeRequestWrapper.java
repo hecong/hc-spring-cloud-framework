@@ -39,12 +39,11 @@ public class CustomizeRequestWrapper extends HttpServletRequestWrapper {
     }
 
     private void initHeader(HttpServletRequest request) {
-        // 初始化 header
+        // 初始化 header，统一转小写存储（HTTP header 大小写不敏感）
         Enumeration<String> headerNames = request.getHeaderNames();
-        Iterator<String> iterator = headerNames.asIterator();
-        while (iterator.hasNext()) {
-            String name = iterator.next();
-            headerMap.put(name, request.getHeader(name));
+        while (headerNames.hasMoreElements()) {
+            String name = headerNames.nextElement();
+            headerMap.put(name.toLowerCase(), request.getHeader(name));
         }
     }
 

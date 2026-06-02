@@ -25,7 +25,7 @@ public class XssFilter implements Filter {
         String uri = req.getRequestURI();
 
         // 关闭XSS or 放行路径
-        if (!properties.isXssEnabled() || isExclude(uri)) {
+        if (!properties.getXssEnabled() || isExclude(uri)) {
             chain.doFilter(request, response);
             return;
         }

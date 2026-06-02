@@ -2,7 +2,6 @@ package com.hc.framework.web.wrapper;
 
 import com.hc.framework.web.config.WebProperties;
 import com.hc.framework.web.model.Result;
-import jakarta.annotation.Resource;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -25,8 +24,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 @RestControllerAdvice
 public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
 
-    @Resource
-    private WebProperties webProperties;
+    private final WebProperties webProperties;
+
+    public ResponseWrapAdvice(WebProperties webProperties) {
+        this.webProperties = webProperties;
+    }
 
     /**
      * 判断是否需要包装：仅当 wrapResponse=true 且返回值不是 Result 时才包装

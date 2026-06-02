@@ -7,6 +7,7 @@ import com.hc.framework.web.serializer.ResultSerializer;
 import com.hc.framework.web.wrapper.ResponseWrapAdvice;
 import com.hc.framework.web.xss.XssFilter;
 import com.hc.framework.web.xss.XssStringDeserializer;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,11 +15,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.util.List;
 
 /**
  * Web Starter 自动配置类
@@ -32,7 +28,9 @@ import java.util.List;
  *   <li>hc.web.data-field: 响应数据字段名（默认 data）</li>
  * </ul>
  *
- * <p>本配置类同时处理 Jackson 消息转换器的注册，确保 WebProperties 能被正确注入。</p>
+ * <p>通过 {@link PostConstruct} 在 Spring 托管的 ObjectMapper 上直接注册自定义 Module，
+ * 所有 {@code MappingJackson2HttpMessageConverter} 共享同一个 ObjectMapper，
+ * 无需 copy 或额外 Converter。</p>
  *
  * @author hc-framework
  * @since 1.0.0
@@ -43,12 +41,29 @@ import java.util.List;
 public class WebAutoConfiguration {
 
     private final WebProperties webProperties;
+    private final ObjectMapper objectMapper;
 
     /**
-     * 构造器注入 WebProperties，确保配置属性已加载
+     * 构造器注入 WebProperties 与 ObjectMapper
      */
-    public WebAutoConfiguration(WebProperties webProperties) {
+    public WebAutoConfiguration(WebProperties webProperties, ObjectMapper objectMapper) {
         this.webProperties = webProperties;
+        this.objectMapper = objectMapper;
+    }
+
+    /**
+     * 在 Spring 托管的 ObjectMapper 上注册自定义 Module
+     * <p>
+     * 所有 Converter 共享同一 ObjectMapper 实例，无需 copy。
+     * ResultSerializer 仅匹配 Result 类型，XssStringDeserializer 仅匹配 String 类型，
+     * 不会影响其他类型的序列化/反序列化。
+     */
+    @PostConstruct
+    public void customizeObjectMapper() {
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(new ResultSerializer(webProperties, objectMapper));
+        module.addDeserializer(String.class, new XssStringDeserializer());
+        objectMapper.registerModule(module);
     }
 
     /**
@@ -64,50 +79,10 @@ public class WebAutoConfiguration {
      * 响应包装器（实现 wrapResponse 开关）
      */
     @Bean
+    @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "hc.web", name = "wrap-response", havingValue = "true", matchIfMissing = true)
     public ResponseWrapAdvice responseWrapAdvice() {
-        return new ResponseWrapAdvice();
-    }
-
-    /**
-     * Jackson 消息转换器配置
-     *
-     * <p>复用 Spring 容器中的 ObjectMapper，在其基础上注册自定义模块，
-     * 避免覆盖用户的 spring.jackson.* 配置。</p>
-     */
-    @Bean
-    public WebMvcConfigurer jacksonConfigurer(ObjectMapper objectMapper) {
-        return new WebMvcConfigurer() {
-            @Override
-            public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
-                // 注册自定义模块到已有 ObjectMapper（保留 spring.jackson.* 配置）
-                ObjectMapper customized = objectMapper.copy();
-                customizeObjectMapper(customized);
-
-                // 创建 Jackson 消息转换器
-                MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-                converter.setObjectMapper(customized);
-
-                // 插入到列表头部，优先使用
-                converters.add(0, converter);
-            }
-        };
-    }
-
-    /**
-     * 在已有 ObjectMapper 基础上注册自定义模块
-     */
-    private void customizeObjectMapper(ObjectMapper objectMapper) {
-        // 注册自定义模块
-        SimpleModule module = new SimpleModule();
-
-        // 注册 Result 序列化器（支持动态字段名）
-        module.addSerializer(new ResultSerializer(webProperties, objectMapper));
-
-        // 注册 String 反序列化器（XSS 过滤）
-        module.addDeserializer(String.class, new XssStringDeserializer());
-
-        objectMapper.registerModule(module);
+        return new ResponseWrapAdvice(webProperties);
     }
 
     /**

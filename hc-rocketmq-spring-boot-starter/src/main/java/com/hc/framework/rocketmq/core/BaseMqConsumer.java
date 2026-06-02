@@ -53,7 +53,7 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
     @Override
     public ConsumeResult consume(MessageView messageView) {
         String body = parseMessageBody(messageView.getBody());
-        BaseMqMessage baseMsg;
+        BaseMqMessage baseMsg = null;
 
         try {
             // 1. 解析消息
@@ -75,8 +75,8 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
 
             log.info("[RocketMQ] 开始消费消息 topic:{} tag:{} msgId:{}", topic, tag, msgId);
 
-            // 3. 幂等检查（如果已消费过，直接返回成功）
-            if (idempotentUtils != null && idempotentUtils.isConsumed(msgId)) {
+            // 3. 幂等检查（原子标记，首次消费返回 true，重复返回 false）
+            if (idempotentUtils != null && !idempotentUtils.tryMarkConsumed(msgId)) {
                 log.warn("[RocketMQ] 消息重复消费，跳过处理 msgId:{}", msgId);
                 return ConsumeResult.SUCCESS;
             }
@@ -85,16 +85,15 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
             T businessData = convertData(baseMsg.getData());
             doConsume(businessData);
 
-            // 5. 记录消费成功（幂等）
-            if (idempotentUtils != null) {
-                idempotentUtils.markConsumed(msgId);
-            }
-
             log.info("[RocketMQ] 消息消费成功 topic:{} tag:{} msgId:{}", topic, tag, msgId);
             return ConsumeResult.SUCCESS;
 
         } catch (Exception e) {
             log.error("[RocketMQ] 消息消费异常", e);
+            // 失败时清除幂等标记，允许重试
+            if (idempotentUtils != null && baseMsg != null) {
+                idempotentUtils.remove(baseMsg.getMsgId());
+            }
             // 返回 FAILURE，框架会自动重试
             return ConsumeResult.FAILURE;
         } finally {

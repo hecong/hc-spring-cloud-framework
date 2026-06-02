@@ -2,6 +2,8 @@ package com.hc.framework.rocketmq.config;
 
 import com.hc.framework.rocketmq.core.RocketMqSender;
 import com.hc.framework.rocketmq.util.IdempotentUtils;
+
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.core.RocketMQClientTemplate;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -40,9 +42,10 @@ public class RocketMQAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(RocketMqSender.class)
-    public RocketMqSender rocketMqSender(RocketMQClientTemplate rocketMQClientTemplate) {
-        log.info("[RocketMQ] 配置 RocketMqSender");
-        return new RocketMqSender(rocketMQClientTemplate);
+    public RocketMqSender rocketMqSender(RocketMQClientTemplate rocketMQClientTemplate,
+                                          Map<String, RocketMQClientTemplate> templateMap) {
+        log.info("[RocketMQ] 配置 RocketMqSender，可用 Template: {}", templateMap.keySet());
+        return new RocketMqSender(rocketMQClientTemplate, templateMap);
     }
 
     /**

@@ -54,10 +54,14 @@ public abstract class BaseTransactionChecker implements TransactionChecker {
             ByteBuffer buffer = messageView.getBody();
             byte[] bytes;
             if (buffer.hasArray()) {
-                bytes = buffer.array();
+                // 安全截取有效字节（避免包含后备数组中的垃圾数据）
+                bytes = new byte[buffer.remaining()];
+                System.arraycopy(buffer.array(),
+                        buffer.arrayOffset() + buffer.position(),
+                        bytes, 0, buffer.remaining());
             } else {
                 bytes = new byte[buffer.remaining()];
-                buffer.get(bytes);
+                buffer.duplicate().get(bytes); // 使用副本，避免修改原始 buffer 位置
             }
             String body = new String(bytes, StandardCharsets.UTF_8);
             return JsonUtils.fromJson(body, BaseMqMessage.class);

@@ -52,30 +52,18 @@ public class XssHttpServletRequestWrapper extends HttpServletRequestWrapper {
     // ============================ attribute ============================
     @Override
     public Object getAttribute(String name) {
-        Object value = super.getAttribute(name);
-        if (value instanceof String) {
-            return XssKit.escape((String) value);
-        }
-        return value;
+        return super.getAttribute(name);
     }
 
     // ============================ header ============================
     @Override
     public String getHeader(String name) {
-        String value = super.getHeader(name);
-        if (value == null) {
-            return null;
-        }
-        return XssKit.escape(value);
+        return super.getHeader(name);
     }
 
     // ============================ queryString ============================
     @Override
     public String getQueryString() {
-        String value = super.getQueryString();
-        if (value == null) {
-            return null;
-        }
-        return XssKit.escape(value);
+        return super.getQueryString();
     }
 }
