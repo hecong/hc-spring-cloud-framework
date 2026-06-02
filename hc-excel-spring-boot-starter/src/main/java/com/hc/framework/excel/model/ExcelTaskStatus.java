@@ -87,7 +87,7 @@ public class ExcelTaskStatus {
         this.startTime = System.currentTimeMillis();
     }
 
-    public void updateProgress(int total) {
+    public synchronized void updateProgress(int total) {
         this.total = total;
         this.state = TaskState.RUNNING;
         if (total > 0) {
@@ -105,13 +105,13 @@ public class ExcelTaskStatus {
         this.processed++;
     }
 
-    public void complete() {
+    public synchronized void complete() {
         this.endTime = System.currentTimeMillis();
         this.progress = 100;
-        this.state = this.failCount > 0 && this.successCount == 0 ? TaskState.FAIL : TaskState.SUCCESS;
+        this.state = this.failCount > 0 ? TaskState.FAIL : TaskState.SUCCESS;
     }
 
-    public void fail(String errorMsg) {
+    public synchronized void fail(String errorMsg) {
         this.endTime = System.currentTimeMillis();
         this.state = TaskState.FAIL;
         this.errorMsg = errorMsg;

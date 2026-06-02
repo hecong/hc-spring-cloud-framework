@@ -59,6 +59,12 @@ import java.util.List;
 public class ExcelStyleUtil {
 
     /**
+     * Excel 默认字体名称，可通过 {@code hc.excel.async-pool.font-name} 配置。
+     * 由 {@code ExcelAutoConfiguration} 在启动时注入。
+     */
+    public static String defaultFontName = "微软雅黑";
+
+    /**
      * 默认行高（单位：磅）
      */
     public static final float DEFAULT_ROW_HEIGHT = 20f;
@@ -218,10 +224,13 @@ public class ExcelStyleUtil {
                 if (text == null || text.isEmpty()) {
                     return 0;
                 }
-                // 中文字符按2个字符计算，英文按1个字符
+                // 中文字符按2个字符计算，英文按1个字符（使用 Unicode 块检测，避免平台编码差异）
                 int length = 0;
                 for (char c : text.toCharArray()) {
-                    if (Character.toString(c).getBytes().length > 1) {
+                    Character.UnicodeBlock block = Character.UnicodeBlock.of(c);
+                    if (block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
+                            || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
+                            || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A) {
                         length += 2;
                     } else {
                         length += 1;
@@ -356,7 +365,7 @@ public class ExcelStyleUtil {
         // 字体
         WriteFont headFont = new WriteFont();
         headFont.setFontHeightInPoints((short) 11);
-        headFont.setFontName("微软雅黑");
+        headFont.setFontName(defaultFontName);
         headFont.setBold(true);
         headFont.setColor(DEFAULT_HEADER_FONT_COLOR.getIndex());
         headStyle.setWriteFont(headFont);
@@ -401,7 +410,7 @@ public class ExcelStyleUtil {
         // 字体
         WriteFont headFont = new WriteFont();
         headFont.setFontHeightInPoints((short) fontSize);
-        headFont.setFontName("微软雅黑");
+        headFont.setFontName(defaultFontName);
         headFont.setBold(bold);
         headFont.setColor(fontColor.getIndex());
         headStyle.setWriteFont(headFont);
@@ -428,7 +437,7 @@ public class ExcelStyleUtil {
         // 字体
         WriteFont contentFont = new WriteFont();
         contentFont.setFontHeightInPoints((short) 10);
-        contentFont.setFontName("微软雅黑");
+        contentFont.setFontName(defaultFontName);
         contentStyle.setWriteFont(contentFont);
         
         // 对齐
@@ -457,7 +466,7 @@ public class ExcelStyleUtil {
         // 字体
         WriteFont contentFont = new WriteFont();
         contentFont.setFontHeightInPoints((short) fontSize);
-        contentFont.setFontName("微软雅黑");
+        contentFont.setFontName(defaultFontName);
         contentFont.setColor(fontColor.getIndex());
         contentStyle.setWriteFont(contentFont);
         
@@ -574,34 +583,44 @@ public class ExcelStyleUtil {
         final int summaryIndex = fixedCount + dynamicCount;
         
         return new CellWriteHandler() {
+            // 缓存：每个 Workbook 只创建一次 CellStyle（避免 POI 样式数量溢出）
+            private final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> fixedCache = new java.util.concurrent.ConcurrentHashMap<>();
+            private final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> dynamicCache = new java.util.concurrent.ConcurrentHashMap<>();
+            private final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> summaryCache = new java.util.concurrent.ConcurrentHashMap<>();
+
             @Override
             public void afterCellDispose(CellWriteHandlerContext context) {
                 // 只处理表头行
                 if (context.getHead() == null) {
                     return;
                 }
-                
+
                 Cell cell = context.getCell();
                 int columnIndex = cell.getColumnIndex();
-                
-                // 获取或创建单元格样式
-                CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
-                
-                // 根据列索引选择样式
+                org.apache.poi.ss.usermodel.Workbook workbook = cell.getSheet().getWorkbook();
+
+                // 根据列索引选择缓存和目标样式
+                java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> cache;
                 WriteCellStyle targetStyle;
                 if (columnIndex < fixedCount) {
-                    // 固定列
+                    cache = fixedCache;
                     targetStyle = defaultFixedStyle;
                 } else if (hasSummary && columnIndex == summaryIndex) {
-                    // 汇总列
+                    cache = summaryCache;
                     targetStyle = defaultSummaryStyle;
                 } else {
-                    // 动态列
+                    cache = dynamicCache;
                     targetStyle = defaultDynamicStyle;
                 }
-                
-                // 应用样式
-                applyWriteCellStyle(cellStyle, targetStyle, cell.getSheet().getWorkbook());
+
+                // 从缓存获取或创建 CellStyle
+                final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> styleCache = cache;
+                final WriteCellStyle styleTarget = targetStyle;
+                CellStyle cellStyle = styleCache.computeIfAbsent(workbook, wb -> {
+                    CellStyle style = wb.createCellStyle();
+                    applyWriteCellStyle(style, styleTarget, wb);
+                    return style;
+                });
                 cell.setCellStyle(cellStyle);
             }
         };
@@ -646,42 +665,54 @@ public class ExcelStyleUtil {
         final int summaryIndex = fixedCount + dynamicCount;
         
         return new CellWriteHandler() {
+            // 缓存：每个 Workbook 只创建一次 CellStyle 和 Font（避免 POI 样式数量溢出）
+            private final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> fixedCache = new java.util.concurrent.ConcurrentHashMap<>();
+            private final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> dynamicCache = new java.util.concurrent.ConcurrentHashMap<>();
+            private final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> summaryCache = new java.util.concurrent.ConcurrentHashMap<>();
+
             @Override
             public void afterCellDispose(CellWriteHandlerContext context) {
                 // 只处理内容行（非表头）
                 if (context.getHead() != null) {
                     return;
                 }
-                
+
                 Cell cell = context.getCell();
                 int columnIndex = cell.getColumnIndex();
-                
-                // 获取或创建单元格样式
-                CellStyle cellStyle = cell.getSheet().getWorkbook().createCellStyle();
-                
-                // 根据列索引设置对齐方式
+                org.apache.poi.ss.usermodel.Workbook workbook = cell.getSheet().getWorkbook();
+
+                // 根据列索引确定对齐方式和缓存
+                java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> cache;
                 HorizontalAlignment alignment;
                 boolean bold = false;
-                
+
                 if (columnIndex < fixedCount) {
+                    cache = fixedCache;
                     alignment = fixedAlignment != null ? fixedAlignment : HorizontalAlignment.LEFT;
                 } else if (hasSummary && columnIndex == summaryIndex) {
+                    cache = summaryCache;
                     alignment = summaryAlignment != null ? summaryAlignment : HorizontalAlignment.RIGHT;
                     bold = summaryBold;
                 } else {
+                    cache = dynamicCache;
                     alignment = dynamicAlignment != null ? dynamicAlignment : HorizontalAlignment.CENTER;
                 }
-                
-                cellStyle.setAlignment(alignment);
-                cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-                
-                // 设置字体
-                org.apache.poi.ss.usermodel.Font font = cell.getSheet().getWorkbook().createFont();
-                font.setFontName("微软雅黑");
-                font.setFontHeightInPoints((short) 10);
-                font.setBold(bold);
-                cellStyle.setFont(font);
-                
+
+                // 从缓存获取或创建 CellStyle（含 Font）
+                final java.util.Map<org.apache.poi.ss.usermodel.Workbook, CellStyle> styleCache = cache;
+                final HorizontalAlignment styleAlign = alignment;
+                final boolean styleBold = bold;
+                CellStyle cellStyle = styleCache.computeIfAbsent(workbook, wb -> {
+                    CellStyle style = wb.createCellStyle();
+                    style.setAlignment(styleAlign);
+                    style.setVerticalAlignment(VerticalAlignment.CENTER);
+                    org.apache.poi.ss.usermodel.Font font = wb.createFont();
+                    font.setFontName(defaultFontName);
+                    font.setFontHeightInPoints((short) 10);
+                    font.setBold(styleBold);
+                    style.setFont(font);
+                    return style;
+                });
                 cell.setCellStyle(cellStyle);
             }
         };
@@ -722,11 +753,16 @@ public class ExcelStyleUtil {
         final int summaryIndex = fixedCount + dynamicCount;
         
         return new CellWriteHandler() {
+            // 已设置过宽度的列索引，避免每单元格重复调用 setColumnWidth
+            private final java.util.Set<Integer> setColumns = new java.util.HashSet<>();
+
             @Override
             public void afterCellDispose(CellWriteHandlerContext context) {
-                Cell cell = context.getCell();
-                int columnIndex = cell.getColumnIndex();
-                
+                int columnIndex = context.getCell().getColumnIndex();
+                if (!setColumns.add(columnIndex)) {
+                    return;  // 该列已设置过宽度，跳过
+                }
+
                 int width;
                 if (columnIndex < fixedCount) {
                     width = fixedWidth;
@@ -735,8 +771,8 @@ public class ExcelStyleUtil {
                 } else {
                     width = dynamicWidth;
                 }
-                
-                cell.getSheet().setColumnWidth(columnIndex, width * 256);
+
+                context.getCell().getSheet().setColumnWidth(columnIndex, width * 256);
             }
         };
     }

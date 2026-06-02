@@ -43,13 +43,4 @@ public class TemplateExportRequest {
      */
     private Map<String, Object> data;
 
-    /**
-     * 列表数据（用于列表模板填充）
-     */
-    private Map<String, Object> listData;
-
-    /**
-     * 列表数据填充起始行（默认从模板最后一行开始）
-     */
-    private Integer listStartRow;
 }

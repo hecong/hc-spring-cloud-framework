@@ -3,6 +3,7 @@ package com.hc.framework.excel.util;
 import com.hc.framework.excel.model.DynamicHead;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +43,9 @@ public class ExcelHeadUtil {
      * @return 数据行列表
      */
     public static List<List<Object>> buildDynamicRows(List<DynamicHead> heads, List<Map<String, Object>> dataList) {
+        if (dataList == null) {
+            return Collections.emptyList();
+        }
         List<List<Object>> rows = new ArrayList<>();
         for (Map<String, Object> dataMap : dataList) {
             List<Object> row = new ArrayList<>();

@@ -39,4 +39,9 @@ public class ExcelAsyncPoolProperties {
      * 空闲线程存活时间（秒）
      */
     private int keepAliveSeconds = 60;
+
+    /**
+     * Excel 默认字体名称
+     */
+    private String fontName = "微软雅黑";
 }

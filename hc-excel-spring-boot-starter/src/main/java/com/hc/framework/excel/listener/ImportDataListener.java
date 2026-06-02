@@ -145,12 +145,11 @@ public class ImportDataListener<T> implements ReadListener<T> {
             if (batchHandler != null) {
                 // 异步模式：使用回调处理
                 batchHandler.accept(batchData);
-                successRows += batchData.size();
             } else {
                 // 同步模式：收集数据到 successDataList
                 successDataList.addAll(batchData);
-                successRows += batchData.size();
             }
+            successRows += batchData.size();
 
             // 更新任务状态
             if (taskStatus != null) {
@@ -167,7 +166,7 @@ public class ImportDataListener<T> implements ReadListener<T> {
             // 记录整批失败
             for (T data : batchData) {
                 ExcelImportResult.ErrorRow<T> errorRow = ExcelImportResult.ErrorRow.<T>builder()
-                        .rowNum(currentRowNum - currentBatch.size() + batchData.indexOf(data))
+                        .rowNum(currentRowNum - (batchData.size() - 1) + batchData.indexOf(data))
                         .data(data)
                         .errorMsg(e.getMessage())
                         .build();

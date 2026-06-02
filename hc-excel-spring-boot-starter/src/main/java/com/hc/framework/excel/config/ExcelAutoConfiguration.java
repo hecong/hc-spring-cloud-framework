@@ -14,10 +14,13 @@ import com.hc.framework.excel.service.impl.LocalExcelFileStorage;
 import com.hc.framework.excel.service.impl.LocalExcelTaskStore;
 import com.hc.framework.excel.service.impl.NoOpExcelOperationRecorder;
 import com.hc.framework.excel.service.impl.RedisExcelTaskStore;
+import com.hc.framework.excel.util.ExcelStyleUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,10 +31,16 @@ import org.springframework.data.redis.core.RedisTemplate;
  * Excel自动配置类
  */
 @AutoConfiguration
-@EnableConfigurationProperties(ExcelAsyncPoolProperties.class)
+@EnableConfigurationProperties({ExcelAsyncPoolProperties.class, ExcelTaskStoreProperties.class})
+@ConditionalOnProperty(prefix = "hc.excel", name = "enabled", havingValue = "true", matchIfMissing = true)
 @Import({ExcelAutoConfiguration.RedisTaskStoreConfiguration.class,
-         ExcelAutoConfiguration.LocalTaskStoreConfiguration.class})
+         ExcelAutoConfiguration.LocalTaskStoreConfiguration.class,
+         ExcelAsyncConfig.class})
 public class ExcelAutoConfiguration {
+
+    public ExcelAutoConfiguration(ExcelAsyncPoolProperties poolProperties) {
+        ExcelStyleUtil.defaultFontName = poolProperties.getFontName();
+    }
 
     @Bean
     @ConditionalOnMissingBean(ExcelOperationRecorder.class)
@@ -52,6 +61,7 @@ public class ExcelAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public ExcelAsyncExecutor excelAsyncExecutor(ExcelOperationRecorder operationRecorder,
                                                   ExcelFileStorage fileStorage, ExcelOperatorResolver operatorResolver,
                                                   ExcelTaskStore taskStore) {
@@ -59,11 +69,13 @@ public class ExcelAutoConfiguration {
     }
 
     @Bean
-    public ExcelImportService excelImportService(ExcelAsyncExecutor excelAsyncExecutor) {
-        return new ExcelImportServiceImpl(excelAsyncExecutor);
+    @ConditionalOnMissingBean
+    public ExcelImportService excelImportService(ExcelAsyncExecutor excelAsyncExecutor, ObjectMapper objectMapper) {
+        return new ExcelImportServiceImpl(excelAsyncExecutor, objectMapper);
     }
 
     @Bean
+    @ConditionalOnMissingBean
     public ExcelExportService excelExportService(ExcelAsyncExecutor excelAsyncExecutor) {
         return new ExcelExportServiceImpl(excelAsyncExecutor);
     }
@@ -81,8 +93,9 @@ public class ExcelAutoConfiguration {
         @Bean
         @ConditionalOnMissingBean(ExcelTaskStore.class)
         @ConditionalOnBean(RedisTemplate.class)
-        public ExcelTaskStore redisExcelTaskStore(RedisTemplate<String, Object> redisTemplate) {
-            return new RedisExcelTaskStore(redisTemplate);
+        public ExcelTaskStore redisExcelTaskStore(RedisTemplate<String, Object> redisTemplate,
+                                                    ExcelTaskStoreProperties taskStoreProperties) {
+            return new RedisExcelTaskStore(redisTemplate, taskStoreProperties);
         }
     }
 

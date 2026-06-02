@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -548,7 +549,7 @@ class ExcelExportServiceImplTest {
 
     @Test
     void testExportWithDynamicHead_EmptyData() {
-        List<DynamicHead> heads = Arrays.asList(
+        List<DynamicHead> heads = Collections.singletonList(
             DynamicHead.builder().name("姓名").field("name").build()
         );
         List<Map<String, Object>> emptyData = new ArrayList<>();

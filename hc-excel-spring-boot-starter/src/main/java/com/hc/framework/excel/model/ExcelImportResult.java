@@ -85,7 +85,7 @@ public class ExcelImportResult<T> {
      */
     public static <T> ExcelImportResult<T> fail(int totalRows, int successRows, List<ErrorRow<T>> errorRows) {
         return ExcelImportResult.<T>builder()
-                .success(successRows > 0 && errorRows.isEmpty())
+                .success(false)
                 .totalRows(totalRows)
                 .successRows(successRows)
                 .failRows(errorRows.size())

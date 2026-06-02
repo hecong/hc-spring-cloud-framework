@@ -185,8 +185,8 @@ public class ExcelAsyncExecutor {
         String operatorId = operatorResolver.getOperatorId();
         String operatorName = operatorResolver.getOperatorName();
 
+        File tempFile = new File(tempFilePath);
         try {
-            File tempFile = new File(tempFilePath);
             int totalCount = 0;
 
             try (ExcelWriter excelWriter = EasyExcel.write(tempFile, clazz).build()) {
@@ -217,6 +217,10 @@ public class ExcelAsyncExecutor {
             failTask(taskId, taskStatus, "导出", e);
             // 记录导出失败
             operationRecorder.recordExportComplete(taskId, operatorId, operatorName, false, null, e.getMessage());
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 
@@ -238,8 +242,8 @@ public class ExcelAsyncExecutor {
         String operatorId = operatorResolver.getOperatorId();
         String operatorName = operatorResolver.getOperatorName();
 
+        File tempFile = new File(tempFilePath);
         try {
-            File tempFile = new File(tempFilePath);
             List<T> allData = allDataQuery.get();
             int totalCount = (allData != null) ? allData.size() : 0;
 
@@ -266,6 +270,10 @@ public class ExcelAsyncExecutor {
             failTask(taskId, taskStatus, "导出", e);
             // 记录导出失败
             operationRecorder.recordExportComplete(taskId, operatorId, operatorName, false, null, e.getMessage());
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 
@@ -287,8 +295,8 @@ public class ExcelAsyncExecutor {
         String tempFilePath = buildTempFilePath(request.getFileName(), taskId);
         String operatorId = operatorResolver.getOperatorId();
         String operatorName = operatorResolver.getOperatorName();
+        File tempFile = new File(tempFilePath);
         try {
-            File tempFile = new File(tempFilePath);
             int totalCount = 0;
 
             try (InputStream templateStream = getTemplateStream(request);
@@ -328,6 +336,10 @@ public class ExcelAsyncExecutor {
             failTask(taskId, taskStatus, "模板导出", e);
             // 记录模板导出失败
             operationRecorder.recordExportComplete(taskId, operatorId, operatorName, false, null, e.getMessage());
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 
@@ -351,8 +363,8 @@ public class ExcelAsyncExecutor {
         String tempFilePath = buildTempFilePath("export", taskId);
         String operatorId = operatorResolver.getOperatorId();
         String operatorName = operatorResolver.getOperatorName();
+        File tempFile = new File(tempFilePath);
         try {
-            File tempFile = new File(tempFilePath);
             List<List<String>> headList = ExcelHeadUtil.buildDynamicHeads(heads);
             int totalCount = 0;
 
@@ -383,6 +395,10 @@ public class ExcelAsyncExecutor {
             failTask(taskId, taskStatus, "动态表头导出", e);
             // 记录动态表头导出失败
             operationRecorder.recordExportComplete(taskId, operatorId, operatorName, false, null, e.getMessage());
+        } finally {
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 
@@ -410,13 +426,6 @@ public class ExcelAsyncExecutor {
         return TEMP_DIR + File.separator + getFileName(fileName) + "_" + taskId + ".xlsx";
     }
 
-    private void deleteFile(String filePath) {
-        File file = new File(filePath);
-        if (file.exists()) {
-            file.delete();
-        }
-    }
-
     // ==================== 私有方法 - 任务状态更新 ====================
 
     private void updateProgress(ExcelTaskStatus taskStatus, Consumer<ExcelTaskStatus> progressCallback, int count) {
@@ -428,10 +437,10 @@ public class ExcelAsyncExecutor {
         taskStore.saveTask(taskStatus.getTaskId(), taskStatus);
     }
 
-    private void completeTask(String taskId, ExcelTaskStatus taskStatus, Object... logArgs) {
+    private void completeTask(String taskId, ExcelTaskStatus taskStatus, int successCount, int failCount) {
         taskStatus.complete();
         taskStore.saveTask(taskId, taskStatus);
-        log.info("Excel{}任务完成, taskId: {}", "导入", appendTaskId(taskId, logArgs));
+        log.info("Excel导入任务完成, taskId: {}, 成功: {}, 失败: {}", taskId, successCount, failCount);
     }
 
     private void completeExportTask(String taskId, ExcelTaskStatus taskStatus,
@@ -456,13 +465,6 @@ public class ExcelAsyncExecutor {
         log.error("Excel{}任务失败, taskId: {}", taskType, taskId, e);
         taskStatus.fail(e.getMessage());
         taskStore.saveTask(taskId, taskStatus);
-    }
-
-    private Object[] appendTaskId(String taskId, Object... args) {
-        Object[] result = new Object[args.length + 1];
-        result[0] = taskId;
-        System.arraycopy(args, 0, result, 1, args.length);
-        return result;
     }
 
     // ==================== 私有方法 - 模板处理 ====================

@@ -43,6 +43,11 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         this.objectMapper = new ObjectMapper();
     }
 
+    public ExcelImportServiceImpl(ExcelAsyncExecutor asyncExecutor, ObjectMapper objectMapper) {
+        this.asyncExecutor = asyncExecutor;
+        this.objectMapper = objectMapper;
+    }
+
     @Override
     public <T> ExcelImportResult<T> importData(InputStream inputStream, Class<T> clazz) {
         ImportDataListener<T> listener = new ImportDataListener<>();

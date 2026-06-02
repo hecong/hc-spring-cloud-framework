@@ -1,8 +1,8 @@
 package com.hc.framework.excel.model.multisheet;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 多Sheet导入上下文
@@ -13,12 +13,12 @@ public class MultiSheetContext {
     /**
      * 上下文数据存储
      */
-    private final Map<String, Object> contextData = new HashMap<>();
+    private final Map<String, Object> contextData = new ConcurrentHashMap<>();
 
     /**
      * 已导入的Sheet数据缓存（key: sheetName）
      */
-    private final Map<String, List<?>> sheetDataCache = new HashMap<>();
+    private final Map<String, List<?>> sheetDataCache = new ConcurrentHashMap<>();
 
     /**
      * 设置上下文数据

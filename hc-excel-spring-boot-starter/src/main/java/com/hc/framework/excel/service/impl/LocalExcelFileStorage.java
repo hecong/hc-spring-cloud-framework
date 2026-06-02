@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 /**
  * Excel文件本地存储实现
@@ -36,9 +39,17 @@ public class LocalExcelFileStorage implements ExcelFileStorage {
 
     @Override
     public String upload(InputStream inputStream, String fileName, String taskId) {
-        // 不支持流上传到本地，返回空
-        log.warn("[Excel文件存储]本地存储不支持流上传 - taskId: {}, fileName: {}", taskId, fileName);
-        return null;
+        try {
+            Path targetPath = Path.of(System.getProperty("java.io.tmpdir"), taskId + "_" + fileName);
+            Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            if (log.isDebugEnabled()) {
+                log.debug("[Excel文件存储]本地存储(流) - taskId: {}, path: {}", taskId, targetPath);
+            }
+            return targetPath.toAbsolutePath().toString();
+        } catch (Exception e) {
+            log.error("[Excel文件存储]流上传失败 - taskId: {}, fileName: {}", taskId, fileName, e);
+            return null;
+        }
     }
 
     @Override

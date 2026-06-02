@@ -31,8 +31,4 @@ public class ExcelImportRequest {
      */
     private Integer batchSize;
 
-    /**
-     * 是否校验数据（默认true）
-     */
-    private Boolean validateData;
 }
