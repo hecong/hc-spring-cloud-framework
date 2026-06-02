@@ -16,6 +16,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -169,7 +170,7 @@ public class SaTokenAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(StpInterface.class)
     public StpInterface stpInterface(SaPermissionProvider permissionProvider,
-                                     SaPermissionCacheService cacheService) {
+                                     @Autowired(required = false) SaPermissionCacheService cacheService) {
         return new SaTokenStpInterfaceImpl(permissionProvider, cacheService);
     }
 

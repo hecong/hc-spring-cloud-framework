@@ -45,7 +45,7 @@ import org.springframework.web.filter.CorsFilter;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "hc.satoken.frontend", name = "cors-enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "hc.satoken.frontend", name = "cors-enabled", havingValue = "true")
 public class SaTokenCorsConfiguration {
 
     private final SaTokenProperties saTokenProperties;

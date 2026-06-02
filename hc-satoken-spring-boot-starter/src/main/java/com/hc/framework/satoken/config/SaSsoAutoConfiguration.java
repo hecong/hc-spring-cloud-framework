@@ -223,9 +223,20 @@ public class SaSsoAutoConfiguration {
 
         /**
          * 对重定向 URL 进行编码，防止 HTTP 响应头注入
+         *
+         * <p>先去除原始 CRLF 字符，再使用 URLEncoder 编码防止 %0d%0a 等编码绕过。</p>
          */
         private String encodeRedirectUrl(String redirectUrl) {
-            return redirectUrl.replace("\r", "").replace("\n", "");
+            if (redirectUrl == null || redirectUrl.isEmpty()) {
+                return "";
+            }
+            String cleaned = redirectUrl.replace("\r", "").replace("\n", "");
+            try {
+                return java.net.URLEncoder.encode(cleaned, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                // URLEncoder 失败时的兜底：去除所有换行相关字符
+                return cleaned.replaceAll("[\\r\\n]", "");
+            }
         }
     }
 }

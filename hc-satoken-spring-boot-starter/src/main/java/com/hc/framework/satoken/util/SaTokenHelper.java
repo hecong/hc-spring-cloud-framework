@@ -380,8 +380,10 @@ public class SaTokenHelper {
      * @return 获取角色列表
      */
     public List<String> getRoleList(){
-        Object loginId = StpUtil.getLoginId();
-        return StpUtil.getRoleList(loginId);
+        if (!StpUtil.isLogin()) {
+            return java.util.Collections.emptyList();
+        }
+        return StpUtil.getRoleList(StpUtil.getLoginId());
     }
 
     /**
@@ -389,7 +391,9 @@ public class SaTokenHelper {
      * @return 获取所有权限
      */
     public List<String> getPermissionList(){
-        Object loginId = StpUtil.getLoginId();
-        return StpUtil.getPermissionList(loginId);
+        if (!StpUtil.isLogin()) {
+            return java.util.Collections.emptyList();
+        }
+        return StpUtil.getPermissionList(StpUtil.getLoginId());
     }
 }

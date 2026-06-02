@@ -241,7 +241,7 @@ public class SaPasswordEncoder {
                     md.update(salt.getBytes(StandardCharsets.UTF_8));
                     byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
                     String computed = HexFormat.of().formatHex(digest);
-                    return computed.equalsIgnoreCase(hash);
+                    return constantTimeHexEquals(computed, hash);
                 } catch (NoSuchAlgorithmException e) {
                     throw new IllegalStateException("MD5 算法不可用", e);
                 }
@@ -252,7 +252,7 @@ public class SaPasswordEncoder {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
             String computed = HexFormat.of().formatHex(digest);
-            return computed.equalsIgnoreCase(encodedPassword);
+            return constantTimeHexEquals(computed, encodedPassword);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("MD5 算法不可用", e);
         }
@@ -435,7 +435,7 @@ public class SaPasswordEncoder {
                 String salt = body.substring(0, dollarIndex);
                 String hash = body.substring(dollarIndex + 1);
                 String computed = computeSM3(salt, rawPassword);
-                return computed.equalsIgnoreCase(hash);
+                return constantTimeHexEquals(computed, hash);
             }
         }
         // 兼容旧格式：无盐值的 64 位十六进制
@@ -443,10 +443,10 @@ public class SaPasswordEncoder {
             MessageDigest md = MessageDigest.getInstance("SM3");
             byte[] digest = md.digest(rawPassword.toString().getBytes(StandardCharsets.UTF_8));
             String computed = HexFormat.of().formatHex(digest);
-            return computed.equalsIgnoreCase(encodedPassword);
+            return constantTimeHexEquals(computed, encodedPassword);
         } catch (NoSuchAlgorithmException e) {
             String computed = computeSM3Fallback("", rawPassword);
-            return computed.equalsIgnoreCase(encodedPassword);
+            return constantTimeHexEquals(computed, encodedPassword);
         }
     }
 
@@ -535,5 +535,22 @@ public class SaPasswordEncoder {
          * <p>中国国家密码管理局发布的密码哈希算法</p>
          */
         SM3
+    }
+
+    // ==================== 工具方法 ====================
+
+    /**
+     * 恒定时间比较两个十六进制哈希字符串
+     *
+     * <p>防止计时旁路攻击。将字符串转为字节数组后使用
+     * {@link MessageDigest#isEqual(byte[], byte[])} 比较。</p>
+     */
+    private static boolean constantTimeHexEquals(String a, String b) {
+        if (a.length() != b.length()) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                HexFormat.of().parseHex(a.toLowerCase()),
+                HexFormat.of().parseHex(b.toLowerCase()));
     }
 }

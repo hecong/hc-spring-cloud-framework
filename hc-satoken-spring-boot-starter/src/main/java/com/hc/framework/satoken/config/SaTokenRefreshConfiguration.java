@@ -67,6 +67,7 @@ public class SaTokenRefreshConfiguration {
     public SaPasswordEncoderHolder saPasswordEncoderHolder() {
         String algorithm = saTokenProperties.getPassword().getAlgorithm();
         SaPasswordEncoder.PasswordAlgorithm passwordAlgorithm = parseAlgorithm(algorithm);
+        SaPasswordEncoder.setDefaultAlgorithm(passwordAlgorithm);
         log.info("Sa-Token 密码编码器已初始化（动态刷新支持），算法: {}", passwordAlgorithm);
         if (passwordAlgorithm != SaPasswordEncoder.PasswordAlgorithm.BCRYPT) {
             log.warn("当前密码算法为 {}，不推荐用于生产环境。如需切换算法请重启服务，避免运行时切换导致验证异常。",

@@ -55,16 +55,42 @@ public class SaJwtTokenService {
     }
 
     /**
-     * 创建 JWT Token
+     * 登录并创建 JWT Token
      *
-     * <p>使用 Sa-Token 的 JWT 模式时，直接调用 StpUtil.login() 即可自动生成 JWT Token。</p>
-     * <p>此方法提供手动创建 JWT Token 的能力。</p>
+     * <p>调用 {@code StpUtil.login(userId)} 登录用户，然后返回 JWT Token。</p>
+     * <p><b>注意：此方法会产生副作用——当前请求的 Sa-Token 会话会被切换为 userId 的登录状态。</b></p>
      *
      * @param userId 用户ID
      * @return JWT Token
      */
+    public String loginAndCreateToken(Long userId) {
+        return loginAndCreateToken(userId, null);
+    }
+
+    /**
+     * 登录并创建 JWT Token（带额外 Claims）
+     *
+     * <p>调用 {@code StpUtil.login(userId)} 登录用户，然后返回 JWT Token。</p>
+     * <p><b>注意：此方法会产生副作用——当前请求的 Sa-Token 会话会被切换为 userId 的登录状态。</b></p>
+     *
+     * @param userId       用户ID
+     * @param extraClaims 额外的 Claims
+     * @return JWT Token
+     */
+    public String loginAndCreateToken(Long userId, Map<String, Object> extraClaims) {
+        return doCreateToken(userId, extraClaims);
+    }
+
+    /**
+     * 创建 JWT Token
+     *
+     * @param userId 用户ID
+     * @return JWT Token
+     * @deprecated 请使用 {@link #loginAndCreateToken(Long)}，方法名明确表达登录副作用。
+     */
+    @Deprecated
     public String createToken(Long userId) {
-        return createToken(userId, null);
+        return loginAndCreateToken(userId, null);
     }
 
     /**
@@ -73,8 +99,17 @@ public class SaJwtTokenService {
      * @param userId       用户ID
      * @param extraClaims 额外的 Claims
      * @return JWT Token
+     * @deprecated 请使用 {@link #loginAndCreateToken(Long, Map)}，方法名明确表达登录副作用。
      */
+    @Deprecated
     public String createToken(Long userId, Map<String, Object> extraClaims) {
+        return loginAndCreateToken(userId, extraClaims);
+    }
+
+    /**
+     * 执行实际的 Token 创建逻辑
+     */
+    private String doCreateToken(Long userId, Map<String, Object> extraClaims) {
         if (!properties.isJwtEnabled()) {
             log.warn("JWT 模式未启用，请配置 hc.satoken.jwt.enabled=true 或 token.style=jwt");
             return null;
