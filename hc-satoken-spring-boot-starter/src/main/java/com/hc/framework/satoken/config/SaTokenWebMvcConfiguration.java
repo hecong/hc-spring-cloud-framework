@@ -1,6 +1,8 @@
 package com.hc.framework.satoken.config;
 
-import com.hc.framework.satoken.interceptor.SaTokenUrlInterceptor;
+import cn.dev33.satoken.interceptor.SaInterceptor;
+import cn.dev33.satoken.router.SaRouter;
+import cn.dev33.satoken.stp.StpUtil;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -9,20 +11,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * Sa-Token Web MVC 配置类
  *
- * <p>注册 URL 权限拦截器，实现基于配置文件的路径权限控制。</p>
- *
- * <p>拦截器配置：</p>
+ * <p>使用 Sa-Token 内置的 SaInterceptor，同时支持：</p>
  * <ul>
- *   <li>拦截路径：/**（所有路径）</li>
- *   <li>排除路径：由 SaTokenProperties.getAllExcludePaths() 提供</li>
- *   <li>优先级：较高（在业务拦截器之前执行）</li>
+ *   <li>注解鉴权：@SaCheckLogin / @SaCheckRole / @SaCheckPermission</li>
+ *   <li>路由鉴权：排除路径以外的请求默认需要登录</li>
  * </ul>
  *
- * <p>启用条件：</p>
- * <ul>
- *   <li>hc.satoken.enabled = true（默认）</li>
- *   <li>hc.satoken.permission.enabled = true（默认）</li>
- * </ul>
+ * <p>排除路径由 SaTokenProperties.getAllExcludePaths() 提供，
+ * 包含 Swagger、登录接口、用户自定义排除路径等。</p>
+ *
+ * <p>启用条件：hc.satoken.enabled = true（默认）</p>
  *
  * @author hc-framework
  * @since 1.0.0
@@ -33,28 +31,18 @@ public class SaTokenWebMvcConfiguration implements WebMvcConfigurer {
 
     private final SaTokenProperties saTokenProperties;
 
-    /**
-     * 构造器注入
-     */
     public SaTokenWebMvcConfiguration(SaTokenProperties saTokenProperties) {
         this.saTokenProperties = saTokenProperties;
     }
 
-    /**
-     * 注册 Sa-Token URL 权限拦截器
-     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 权限校验未启用，不注册拦截器
-        if (!Boolean.TRUE.equals(saTokenProperties.getPermission().getEnabled())) {
-            return;
-        }
-
-        SaTokenUrlInterceptor interceptor = new SaTokenUrlInterceptor(saTokenProperties);
-
-        registry.addInterceptor(interceptor)
-                .addPathPatterns("/**")
-                .excludePathPatterns(saTokenProperties.getAllExcludePaths())
-                .order(0); // 最高优先级，确保在业务拦截器之前执行
+        registry.addInterceptor(new SaInterceptor(handle -> {
+            // 排除路径不需要任何校验，其余路径默认需要登录
+            SaRouter.notMatch(saTokenProperties.getAllExcludePaths())
+                    .check(r -> StpUtil.checkLogin());
+        })).addPathPatterns("/**")
+          .excludePathPatterns(saTokenProperties.getAllExcludePaths())
+          .order(0);
     }
 }

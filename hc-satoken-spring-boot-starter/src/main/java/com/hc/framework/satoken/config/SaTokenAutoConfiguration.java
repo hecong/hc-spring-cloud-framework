@@ -2,6 +2,7 @@ package com.hc.framework.satoken.config;
 
 import cn.dev33.satoken.stp.StpInterface;
 import com.hc.framework.redis.util.RedisCacheUtils;
+import com.hc.framework.common.spi.UserContextPermissionProvider;
 import com.hc.framework.satoken.handler.SaPermissionProvider;
 import com.hc.framework.satoken.handler.SaTokenAuthLogger;
 import com.hc.framework.satoken.handler.SaTokenExceptionHandler;
@@ -39,20 +40,18 @@ import org.springframework.context.annotation.Import;
  * <p>本配置类提供以下核心功能：</p>
  * <ul>
  *   <li>Token 存储适配（自动检测 Redis 环境）</li>
- *   <li>Token 过期清理（定时任务）</li>
  *   <li>多 Token 风格支持（UUID/JWT/雪花算法）</li>
  *   <li>权限数据加载接口实现，支持缓存</li>
- *   <li>URL 权限拦截器</li>
+ *   <li>注解鉴权自动生效（@SaCheckLogin/@SaCheckRole/@SaCheckPermission）</li>
  * </ul>
  *
  * <p>开箱即用特性：</p>
  * <ul>
  *   <li>注解权限自动生效：引入 Starter 后直接使用 @SaCheckLogin/@SaCheckRole/@SaCheckPermission</li>
- *   <li>路径匹配权限：配置 url-permissions 即可拦截鉴权</li>
+ *   <li>默认登录校验：未在排除路径中的请求默认需要登录</li>
  *   <li>角色/权限缓存：配置 permission.cache-enabled=true 自动缓存</li>
  *   <li>自定义权限处理器：实现 SaPermissionProvider 接口自动注入</li>
  *   <li>Token 存储适配：引入 hc-redis-spring-boot-starter 后自动使用 Redis 存储</li>
- *   <li>Token 过期清理：配置 token-clean.enabled=true 自动清理过期 Token</li>
  *   <li>JWT Token：配置 jwt.enabled=true 或 token.style=jwt 自动切换</li>
  *   <li>SSO 单点登录：配置 sso.enabled=true 快速接入 SSO</li>
  * </ul>
@@ -67,9 +66,6 @@ import org.springframework.context.annotation.Import;
  *     jwt:
  *       enabled: false
  *       secret: your-jwt-secret
- *     token-clean:
- *       enabled: true
- *       cron: "0 0 3 * * ?"
  *     sso:
  *       enabled: false
  *       server-url: http://sso.example.com
@@ -171,8 +167,9 @@ public class SaTokenAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(StpInterface.class)
     public StpInterface stpInterface(SaPermissionProvider permissionProvider,
-                                     @Autowired(required = false) SaPermissionCacheService cacheService) {
-        return new SaTokenStpInterfaceImpl(permissionProvider, cacheService);
+                                     @Autowired(required = false) SaPermissionCacheService cacheService,
+                                     @Autowired(required = false) UserContextPermissionProvider userContextPermissionProvider) {
+        return new SaTokenStpInterfaceImpl(permissionProvider, cacheService, userContextPermissionProvider);
     }
 
     /**
@@ -206,8 +203,8 @@ public class SaTokenAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public SaTokenHelper saTokenHelper() {
-        return new SaTokenHelper(saTokenProperties);
+    public SaTokenHelper saTokenHelper(@Autowired(required = false) SaPermissionCacheService cacheService) {
+        return new SaTokenHelper(saTokenProperties, cacheService);
     }
 
     /**

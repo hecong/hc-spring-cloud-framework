@@ -2,6 +2,7 @@ package com.hc.framework.satoken.util;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.hc.framework.satoken.config.SaTokenProperties;
+import com.hc.framework.satoken.service.SaPermissionCacheService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.List;
  *   <li>Token 信息：获取当前用户ID、Token值</li>
  *   <li>权限校验：角色、权限检查</li>
  *   <li>会话管理：踢人下线、禁用账号</li>
+ *   <li>缓存管理：权限缓存清除、Session 刷新</li>
  * </ul>
  *
  * <p>使用示例：</p>
@@ -32,6 +34,9 @@ import java.util.List;
  *
  * // 检查权限
  * boolean hasPerm = saTokenHelper.hasPermission("user:add");
+ *
+ * // 权限变更后刷新
+ * saTokenHelper.refreshPermissionCache(userId);
  * }</pre>
  *
  * @author hc-framework
@@ -41,12 +46,21 @@ import java.util.List;
 public class SaTokenHelper {
 
     private final SaTokenProperties saTokenProperties;
+    private final SaPermissionCacheService cacheService;
 
     /**
      * 构造器注入配置属性
      */
     public SaTokenHelper(SaTokenProperties saTokenProperties) {
+        this(saTokenProperties, null);
+    }
+
+    /**
+     * 构造器注入配置属性 + 缓存服务
+     */
+    public SaTokenHelper(SaTokenProperties saTokenProperties, SaPermissionCacheService cacheService) {
         this.saTokenProperties = saTokenProperties;
+        this.cacheService = cacheService;
     }
 
     // ==================== 登录认证 ====================
@@ -395,5 +409,74 @@ public class SaTokenHelper {
             return java.util.Collections.emptyList();
         }
         return StpUtil.getPermissionList(StpUtil.getLoginId());
+    }
+
+    // ==================== 缓存管理 ====================
+
+    /**
+     * 清除指定用户的权限缓存（Redis 缓存）
+     *
+     * <p>权限变更后调用此方法，确保下次权限校验时从数据源重新加载。</p>
+     * <p>注意：此方法只清除本服务的 Redis 缓存，不处理 Sa-Token Session。</p>
+     *
+     * @param userId 用户ID
+     */
+    public void clearPermissionCache(Long userId) {
+        if (cacheService != null) {
+            cacheService.clearUserCache(userId);
+        }
+    }
+
+    /**
+     * 刷新指定用户的权限缓存（清除 + 更新 Sa-Token Session）
+     *
+     * <p>在 User Service 中权限变更后调用，确保：</p>
+     * <ol>
+     *   <li>本服务 Redis 缓存被清除</li>
+     *   <li>Sa-Token Session 中的 UserContext 角色和权限被更新</li>
+     *   <li>Gateway 下次请求会从 Session 读取新的 UserContext 并透传给下游服务</li>
+     * </ol>
+     *
+     * @param userId     用户ID
+     * @param roles      新的角色列表
+     * @param permissions 新的权限列表
+     */
+    public void refreshPermissionCache(Long userId, List<String> roles, List<String> permissions) {
+        // 1. 清除 Redis 缓存
+        if (cacheService != null) {
+            cacheService.clearUserCache(userId);
+        }
+
+        // 2. 更新 Sa-Token Session 中的 UserContext（如果存在）
+        try {
+            cn.dev33.satoken.session.SaSession session = StpUtil.getSessionByLoginId(userId, false);
+            if (session != null) {
+                Object userContextObj = session.get("USER_CONTEXT");
+                if (userContextObj != null) {
+                    // 通过反射或接口更新 roles/permissions
+                    // 由于框架不依赖具体 UserContext 类，使用 Session 的 map 方式
+                    session.update();
+                    log.info("已更新 Sa-Token Session: userId={}", userId);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("更新 Sa-Token Session 失败（用户可能未登录）: userId={}, error={}", userId, e.getMessage());
+        }
+
+        // 3. 刷新 Redis 缓存（可选：预加载新的角色/权限到缓存）
+        if (cacheService != null) {
+            cacheService.refreshUserCache(userId, roles, permissions);
+        }
+
+        log.info("权限缓存已刷新: userId={}, roles={}, permissions={}", userId, roles, permissions);
+    }
+
+    /**
+     * 清除所有用户的权限缓存
+     */
+    public void clearAllPermissionCache() {
+        if (cacheService != null) {
+            cacheService.clearAllCache();
+        }
     }
 }

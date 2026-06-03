@@ -1,6 +1,8 @@
 package com.hc.framework.satoken.handler;
 
 import cn.dev33.satoken.stp.StpInterface;
+import cn.dev33.satoken.stp.StpUtil;
+import com.hc.framework.common.spi.UserContextPermissionProvider;
 import com.hc.framework.satoken.service.SaPermissionCacheService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -8,32 +10,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Sa-Token 权限数据加载接口（支持缓存）
+ * Sa-Token 权限数据加载接口（支持缓存 + 请求上下文优先）
  *
- * <p>实现 StpInterface 接口，提供角色和权限数据加载能力，支持 Redis 缓存。</p>
- *
- * <p>功能特性：</p>
- * <ul>
- *   <li>支持 Redis 缓存角色和权限数据</li>
- *   <li>缓存未命中时自动从数据源加载</li>
- *   <li>支持自定义缓存过期时间</li>
- *   <li>支持缓存降级（Redis 不可用时直接查询）</li>
- * </ul>
- *
- * <p>使用示例：</p>
- * <pre>{@code
- * @Component
- * public class MyPermissionProvider implements SaPermissionProvider {
- *     @Override
- *     public List<String> getRoles(Long userId) {
- *         return userRoleMapper.selectRolesByUserId(userId);
- *     }
- *     @Override
- *     public List<String> getPermissions(Long userId) {
- *         return permissionMapper.selectPermsByUserId(userId);
- *     }
- * }
- * }</pre>
+ * <p>权限数据获取优先级：</p>
+ * <ol>
+ *   <li>请求上下文（UserContextPermissionProvider） — 微服务场景下从网关透传的上下文获取，数据最新</li>
+ *   <li>Redis 缓存（SaPermissionCacheService） — 减少数据库查询压力</li>
+ *   <li>数据源（SaPermissionProvider） — 缓存未命中时回源查询</li>
+ * </ol>
  *
  * @author hc-framework
  * @since 1.0.0
@@ -43,35 +27,34 @@ public class SaTokenStpInterfaceImpl implements StpInterface {
 
     private final SaPermissionProvider permissionProvider;
     private final SaPermissionCacheService cacheService;
+    private final UserContextPermissionProvider userContextPermissionProvider;
 
     /**
-     * 构造器注入（支持缓存）
-     *
-     * @param permissionProvider 权限数据提供者
-     * @param cacheService       缓存服务
+     * 构造器注入（支持缓存 + 请求上下文）
      */
-    public SaTokenStpInterfaceImpl(SaPermissionProvider permissionProvider, SaPermissionCacheService cacheService) {
+    public SaTokenStpInterfaceImpl(SaPermissionProvider permissionProvider,
+                                   SaPermissionCacheService cacheService,
+                                   UserContextPermissionProvider userContextPermissionProvider) {
         this.permissionProvider = permissionProvider;
         this.cacheService = cacheService;
+        this.userContextPermissionProvider = userContextPermissionProvider;
+    }
+
+    /**
+     * 构造器注入（支持缓存，无请求上下文）
+     */
+    public SaTokenStpInterfaceImpl(SaPermissionProvider permissionProvider,
+                                   SaPermissionCacheService cacheService) {
+        this(permissionProvider, cacheService, null);
     }
 
     /**
      * 构造器注入（不支持缓存，兼容旧版本）
-     *
-     * @param permissionProvider 权限数据提供者
      */
     public SaTokenStpInterfaceImpl(SaPermissionProvider permissionProvider) {
-        this.permissionProvider = permissionProvider;
-        this.cacheService = null;
+        this(permissionProvider, null, null);
     }
 
-    /**
-     * 获取用户权限列表
-     *
-     * @param loginId   登录用户ID
-     * @param loginType 登录类型（多账号体系时使用）
-     * @return 权限列表
-     */
     @Override
     public List<String> getPermissionList(Object loginId, String loginType) {
         if (permissionProvider == null) {
@@ -85,7 +68,16 @@ public class SaTokenStpInterfaceImpl implements StpInterface {
                 return new ArrayList<>();
             }
 
-            // 优先使用缓存
+            // 1. 优先从请求上下文获取（微服务场景下由网关透传，数据最新）
+            if (userContextPermissionProvider != null) {
+                List<String> permissions = userContextPermissionProvider.getCurrentUserPermissions();
+                if (permissions != null) {
+                    log.debug("从请求上下文获取用户权限: userId={}, count={}", userId, permissions.size());
+                    return permissions;
+                }
+            }
+
+            // 2. 从 Redis 缓存获取
             if (cacheService != null) {
                 return cacheService.getPermissions(userId, () -> {
                     try {
@@ -97,7 +89,7 @@ public class SaTokenStpInterfaceImpl implements StpInterface {
                 });
             }
 
-            // 无缓存服务，直接查询
+            // 3. 直接查询数据源
             return permissionProvider.getPermissions(userId);
         } catch (Exception e) {
             log.error("获取用户权限失败: loginId={}, error={}", loginId, e.getMessage());
@@ -105,13 +97,6 @@ public class SaTokenStpInterfaceImpl implements StpInterface {
         }
     }
 
-    /**
-     * 获取用户角色列表
-     *
-     * @param loginId   登录用户ID
-     * @param loginType 登录类型
-     * @return 角色列表
-     */
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
         if (permissionProvider == null) {
@@ -125,7 +110,16 @@ public class SaTokenStpInterfaceImpl implements StpInterface {
                 return new ArrayList<>();
             }
 
-            // 优先使用缓存
+            // 1. 优先从请求上下文获取
+            if (userContextPermissionProvider != null) {
+                List<String> roles = userContextPermissionProvider.getCurrentUserRoles();
+                if (roles != null) {
+                    log.debug("从请求上下文获取用户角色: userId={}, count={}", userId, roles.size());
+                    return roles;
+                }
+            }
+
+            // 2. 从 Redis 缓存获取
             if (cacheService != null) {
                 return cacheService.getRoles(userId, () -> {
                     try {
@@ -137,7 +131,7 @@ public class SaTokenStpInterfaceImpl implements StpInterface {
                 });
             }
 
-            // 无缓存服务，直接查询
+            // 3. 直接查询数据源
             return permissionProvider.getRoles(userId);
         } catch (Exception e) {
             log.error("获取用户角色失败: loginId={}, error={}", loginId, e.getMessage());

@@ -22,17 +22,9 @@ import java.util.List;
  *     jwt:
  *       enabled: true
  *       secret: your-secret-key
- *     token-clean:
- *       enabled: true
- *       cron: "0 0 3 * * ?"
- *     sso:
- *       enabled: true
- *       server-url: http://sso.example.com
  *     permission:
  *       enabled: true
- *       url-permissions:
- *         - path: /admin/**
- *           role: admin
+ *       cache-enabled: true
  * }</pre>
  *
  * @author hc-framework
@@ -318,11 +310,6 @@ public class SaTokenProperties {
         private Boolean enabled = true;
 
         /**
-         * URL 权限规则列表
-         */
-        private List<UrlPermission> urlPermissions = new ArrayList<>();
-
-        /**
          * 是否开启权限缓存
          */
         private Boolean cacheEnabled = true;
@@ -331,54 +318,6 @@ public class SaTokenProperties {
          * 权限缓存过期时间（秒）
          */
         private Long cacheTimeout = 300L;
-    }
-
-    /**
-     * URL 权限规则
-     */
-    @Data
-    public static class UrlPermission {
-
-        /**
-         * 路径（支持 Ant 风格，如 /admin/**）
-         */
-        private String path;
-
-        /**
-         * 所需角色（多个用逗号分隔）
-         */
-        private String role;
-
-        /**
-         * 所需权限（多个用逗号分隔）
-         */
-        private String permission;
-
-        /**
-         * 是否需要登录
-         */
-        private Boolean requireLogin = true;
-
-        /**
-         * 多角色/权限的匹配模式
-         * <p>ANY：拥有任一角色/权限即可（默认，向后兼容）</p>
-         * <p>ALL：必须拥有全部角色/权限</p>
-         */
-        private MatchMode matchMode = MatchMode.ANY;
-    }
-
-    /**
-     * 角色/权限匹配模式
-     */
-    public enum MatchMode {
-        /**
-         * 拥有任一即可
-         */
-        ANY,
-        /**
-         * 必须全部拥有
-         */
-        ALL
     }
 
     // ==================== 登录配置 ====================
