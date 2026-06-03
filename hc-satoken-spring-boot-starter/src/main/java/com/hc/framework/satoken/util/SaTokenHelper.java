@@ -428,12 +428,11 @@ public class SaTokenHelper {
     }
 
     /**
-     * 刷新指定用户的权限缓存（清除 + 更新 Sa-Token Session）
+     * 刷新指定用户的权限缓存
      *
      * <p>在 User Service 中权限变更后调用，确保：</p>
      * <ol>
      *   <li>本服务 Redis 缓存被清除</li>
-     *   <li>Sa-Token Session 中的 UserContext 角色和权限被更新</li>
      *   <li>Gateway 下次请求会从 Session 读取新的 UserContext 并透传给下游服务</li>
      * </ol>
      *
@@ -447,23 +446,7 @@ public class SaTokenHelper {
             cacheService.clearUserCache(userId);
         }
 
-        // 2. 更新 Sa-Token Session 中的 UserContext（如果存在）
-        try {
-            cn.dev33.satoken.session.SaSession session = StpUtil.getSessionByLoginId(userId, false);
-            if (session != null) {
-                Object userContextObj = session.get("USER_CONTEXT");
-                if (userContextObj != null) {
-                    // 通过反射或接口更新 roles/permissions
-                    // 由于框架不依赖具体 UserContext 类，使用 Session 的 map 方式
-                    session.update();
-                    log.info("已更新 Sa-Token Session: userId={}", userId);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("更新 Sa-Token Session 失败（用户可能未登录）: userId={}, error={}", userId, e.getMessage());
-        }
-
-        // 3. 刷新 Redis 缓存（可选：预加载新的角色/权限到缓存）
+        // 2. 刷新 Redis 缓存（可选：预加载新的角色/权限到缓存）
         if (cacheService != null) {
             cacheService.refreshUserCache(userId, roles, permissions);
         }
