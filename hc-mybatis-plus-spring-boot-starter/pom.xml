@@ -50,6 +50,12 @@
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
         </dependency>
+        <!-- MyBatis-Plus JSqlParser（3.5.9+ 分页/防全表更新等拦截器拆分到此模块） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
         <!-- Dynamic Datasource -->
         <dependency>
             <groupId>com.baomidou</groupId>
