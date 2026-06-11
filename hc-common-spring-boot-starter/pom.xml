@@ -12,8 +12,8 @@
     <artifactId>hc-common-spring-boot-starter</artifactId>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -23,15 +23,10 @@
             <groupId>org.dromara.hutool</groupId>
             <artifactId>hutool-all</artifactId>
         </dependency>
-        <!-- Jackson：JSON 序列化/反序列化 -->
+        <!-- Jackson 3.x：JSON 序列化/反序列化（版本由 Spring Boot 4 BOM 管理） -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <!-- Jackson 时间模块 -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
         <!-- Spring Boot 核心（provided，运行时由宿主项目提供） -->
         <dependency>

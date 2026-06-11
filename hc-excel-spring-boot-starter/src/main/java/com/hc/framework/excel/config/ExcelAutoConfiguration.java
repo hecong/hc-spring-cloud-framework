@@ -15,7 +15,7 @@ import com.hc.framework.excel.service.impl.LocalExcelTaskStore;
 import com.hc.framework.excel.service.impl.NoOpExcelOperationRecorder;
 import com.hc.framework.excel.service.impl.RedisExcelTaskStore;
 import com.hc.framework.excel.util.ExcelStyleUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;

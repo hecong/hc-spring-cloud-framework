@@ -14,8 +14,8 @@
     <description>Sa-Token 网关鉴权 Starter - 基于 WebFlux/Reactor 响应式编程</description>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -31,10 +31,10 @@
             <artifactId>hc-redis-spring-boot-starter</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- Spring Cloud Gateway -->
+        <!-- Spring Cloud Gateway（Spring Cloud 2025.1 重命名为 gateway-server-webflux） -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-gateway</artifactId>
+            <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
             <scope>provided</scope>
         </dependency>
         <!-- Spring Boot Configuration Processor -->
@@ -52,7 +52,7 @@
         <!-- Sa-Token Reactor 响应式集成（网关专用） -->
         <dependency>
             <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
+            <artifactId>sa-token-reactor-spring-boot4-starter</artifactId>
         </dependency>
 
         <dependency>

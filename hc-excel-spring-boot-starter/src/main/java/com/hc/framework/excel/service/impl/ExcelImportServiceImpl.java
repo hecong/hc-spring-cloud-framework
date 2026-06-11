@@ -5,8 +5,9 @@ import com.alibaba.excel.ExcelReader;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.read.listener.ReadListener;
 import com.alibaba.excel.read.metadata.ReadSheet;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.hc.framework.excel.executor.ExcelAsyncExecutor;
 import com.hc.framework.excel.listener.ImportDataListener;
 import com.hc.framework.excel.model.ExcelImportRequest;
@@ -40,7 +41,7 @@ public class ExcelImportServiceImpl implements ExcelImportService {
 
     public ExcelImportServiceImpl(ExcelAsyncExecutor asyncExecutor) {
         this.asyncExecutor = asyncExecutor;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = JsonMapper.builder().build();
     }
 
     public ExcelImportServiceImpl(ExcelAsyncExecutor asyncExecutor, ObjectMapper objectMapper) {
@@ -125,8 +126,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
             for (SheetConfig<?> config : sheetConfigs) {
                 SheetImportResult<?> sheetResult = readSingleSheet(excelReader, config, context);
                 result.addSheetResult(config.getSheetName(), sheetResult);
-
-                // 缓存Sheet数据到上下文，供后续Sheet使用
                 context.cacheSheetData(config.getSheetName(), sheetResult.getDataList());
             }
         } catch (Exception e) {
@@ -138,15 +137,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         return result;
     }
 
-    /**
-     * 读取单个Sheet
-     *
-     * @param excelReader Excel读取器
-     * @param config      Sheet配置
-     * @param context     多Sheet上下文
-     * @param <T>         数据类型
-     * @return Sheet导入结果
-     */
     private <T> SheetImportResult<T> readSingleSheet(ExcelReader excelReader, SheetConfig<T> config, MultiSheetContext context) {
         SheetImportResult<T> result = new SheetImportResult<>();
         result.setSheetIndex(config.getSheetIndex());
@@ -178,7 +168,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
             errorList.add(SheetError.of(config.getSheetIndex(), config.getSheetName(), 0, "Sheet读取失败: " + e.getMessage()));
         }
 
-        // 填充结果
         result.setDataList(dataList);
         result.setErrors(errorList);
         result.setSuccessRows(dataList.size());
@@ -189,16 +178,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         return result;
     }
 
-    /**
-     * 创建读取监听器
-     *
-     * @param config    Sheet配置
-     * @param dataList  数据列表
-     * @param errorList 错误列表
-     * @param context   多Sheet上下文
-     * @param <T>       数据类型
-     * @return 读取监听器
-     */
     private <T> ReadListener<T> createReadListener(SheetConfig<T> config, List<T> dataList,
                                                    List<SheetError> errorList, MultiSheetContext context) {
         return new ReadListener<>() {
@@ -209,7 +188,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
                 int rowNum = analysisContext.readRowHolder().getRowIndex() + 1;
 
                 try {
-                    // 数据验证
                     ValidationResult<T> validationResult = validateData(data, config, context);
 
                     if (validationResult.isValid()) {
@@ -217,7 +195,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
                         dataList.add(validData);
                         batchCache.add(validData);
 
-                        // 达到批次大小时执行批次处理
                         if (batchCache.size() >= config.getBatchSize() && config.getBatchHandler() != null) {
                             config.getBatchHandler().accept(new ArrayList<>(batchCache));
                             batchCache.clear();
@@ -232,7 +209,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
                         error.setDataJson(toJsonString(data));
                         errorList.add(error);
 
-                        // 调用错误处理器
                         if (config.getErrorHandler() != null) {
                             config.getErrorHandler().accept(error);
                         }
@@ -256,7 +232,6 @@ public class ExcelImportServiceImpl implements ExcelImportService {
 
             @Override
             public void doAfterAllAnalysed(AnalysisContext analysisContext) {
-                // 处理剩余批次数据
                 if (!batchCache.isEmpty() && config.getBatchHandler() != null) {
                     config.getBatchHandler().accept(new ArrayList<>(batchCache));
                     batchCache.clear();
@@ -265,40 +240,22 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         };
     }
 
-    /**
-     * 验证数据
-     *
-     * @param data    数据
-     * @param config  Sheet配置
-     * @param context 多Sheet上下文
-     * @param <T>     数据类型
-     * @return 验证结果
-     */
     private <T> ValidationResult<T> validateData(T data, SheetConfig<T> config, MultiSheetContext context) {
-        // 优先使用带上下文的验证器
         if (config.getValidatorWithContext() != null) {
             return config.getValidatorWithContext().apply(data, context);
         }
 
-        // 使用普通验证器
         if (config.getValidator() != null) {
             return config.getValidator().apply(data);
         }
 
-        // 无验证器，默认通过
         return ValidationResult.ok(data);
     }
 
-    /**
-     * 将对象转换为 JSON 字符串
-     *
-     * @param data 数据对象
-     * @return JSON 字符串，转换失败时返回空对象字符串
-     */
     private String toJsonString(Object data) {
         try {
             return objectMapper.writeValueAsString(data);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.warn("数据序列化为JSON失败", e);
             return "{}";
         }

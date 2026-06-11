@@ -5,7 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.dromara.hutool.core.io.IoUtil;
 import org.dromara.hutool.core.text.StrUtil;
-import org.dromara.hutool.http.server.servlet.JakartaServletUtil;
+import org.dromara.hutool.http.server.servlet.ServletUtil;
 import org.dromara.hutool.json.JSONUtil;
 import org.springframework.http.MediaType;
 import org.springframework.web.context.request.RequestAttributes;
@@ -31,7 +31,7 @@ public class ServletUtils {
      */
     public static void writeJSON(HttpServletResponse response, Object object) {
         String content = JSONUtil.toJsonStr(object);
-        JakartaServletUtil.write(response, content, MediaType.APPLICATION_JSON_VALUE);
+        ServletUtil.write(response, content, MediaType.APPLICATION_JSON_VALUE);
     }
 
     /**
@@ -84,7 +84,7 @@ public class ServletUtils {
         if (request == null) {
             return null;
         }
-        return JakartaServletUtil.getClientIP(request);
+        return ServletUtil.getClientIP(request);
     }
 
     public static boolean isJsonRequest(ServletRequest request) {
@@ -92,19 +92,19 @@ public class ServletUtils {
     }
 
     public static String getBody(HttpServletRequest request) {
-        return JakartaServletUtil.getBody(request);
+        return ServletUtil.getBody(request);
     }
 
     public static byte[] getBodyBytes(HttpServletRequest request) {
-        return JakartaServletUtil.getBodyBytes(request);
+        return ServletUtil.getBodyBytes(request);
     }
 
     public static String getClientIP(HttpServletRequest request) {
-        return JakartaServletUtil.getClientIP(request);
+        return ServletUtil.getClientIP(request);
     }
 
     public static Map<String, String> getParamMap(HttpServletRequest request) {
-        return JakartaServletUtil.getParamMap(request);
+        return ServletUtil.getParamMap(request);
     }
 
 }
