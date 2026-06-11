@@ -64,6 +64,11 @@ public class MyBatisPlusProperties {
     }
 
     /**
+     * 数据权限配置
+     */
+    private DataPermissionConfig dataPermission = new DataPermissionConfig();
+
+    /**
      * 动态数据源配置
      */
     @Data
@@ -82,5 +87,21 @@ public class MyBatisPlusProperties {
          * 是否严格模式
          */
         private boolean strict = false;
+    }
+
+    /**
+     * 数据权限配置
+     */
+    @Data
+    public static class DataPermissionConfig {
+        /**
+         * 是否启用数据权限拦截器
+         */
+        private boolean enabled = true;
+
+        /**
+         * 部门ID展开上限（超出告警并截断）
+         */
+        private int maxDeptExpandSize = 500;
     }
 }
