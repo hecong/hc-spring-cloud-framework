@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -46,10 +47,10 @@ public class WebAutoConfiguration {
      * Jackson 3.x 的 ObjectMapper 不可变，需通过 rebuild() 创建新实例。
      * 使用 @Primary 确保 MVC 的 HttpMessageConverter 使用此定制版本。
      *
-     * @param bootMapper Spring Boot 自动配置的 ObjectMapper（可能为空，如测试环境）
+     *   自动配置的 ObjectMapper（可能为空，如测试环境）
      */
     @Bean
-    @org.springframework.context.annotation.Primary
+    @Primary
     public ObjectMapper customObjectMapper(ObjectProvider<ObjectMapper> bootMapperProvider) {
         ObjectMapper base = bootMapperProvider.getIfAvailable(() -> JsonMapper.builder().build());
         SimpleModule module = new SimpleModule();
