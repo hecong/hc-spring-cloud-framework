@@ -28,6 +28,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
+        <!-- Spring AOP：数据权限切面需要（aspectjweaver 版本由 Spring Boot BOM 管理） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
         <!-- Validation（@Min/@Max/@NotNull） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -56,10 +65,11 @@
             <artifactId>mybatis-plus-jsqlparser</artifactId>
             <version>${mybatis-plus.version}</version>
         </dependency>
-        <!-- Dynamic Datasource -->
+        <!-- Dynamic Datasource（optional：按需引入多数据源支持） -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>dynamic-datasource-spring-boot4-starter</artifactId>
+            <optional>true</optional>
         </dependency>
         <!-- MySQL Connector -->
         <dependency>
@@ -67,10 +77,11 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- Druid -->
+        <!-- Druid（optional：按需引入，默认使用 HikariCP） -->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>druid-spring-boot-4-starter</artifactId>
+            <optional>true</optional>
         </dependency>
         <!-- Lombok -->
         <dependency>
@@ -100,15 +111,27 @@
             <artifactId>mysql</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- MyBatis-Plus 代码生成器 -->
+        <!-- MyBatis-Plus 代码生成器（optional：仅开发时使用） -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-generator</artifactId>
+            <optional>true</optional>
         </dependency>
-        <!-- Freemarker 模板引擎 -->
+        <!-- Freemarker 模板引擎（optional：代码生成器模板引擎，仅开发时使用） -->
         <dependency>
             <groupId>org.freemarker</groupId>
             <artifactId>freemarker</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>transmittable-thread-local</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+            <version>5.8.36</version>
+            <scope>compile</scope>
         </dependency>
 
     </dependencies>

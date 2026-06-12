@@ -18,10 +18,10 @@
     </properties>
 
     <dependencies>
-        <!-- hc-web-spring-boot-starter -->
+        <!-- hc-common-spring-boot-starter（工具类 + SPI） -->
         <dependency>
             <groupId>com.hnhegui.framework</groupId>
-            <artifactId>hc-web-spring-boot-starter</artifactId>
+            <artifactId>hc-common-spring-boot-starter</artifactId>
         </dependency>
         <!-- Spring Boot Web -->
         <dependency>
@@ -39,15 +39,17 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
-        <!-- Sentinel Core -->
+        <!-- Sentinel Core（optional：仅 @RateLimiter 限流功能需要） -->
         <dependency>
             <groupId>com.alibaba.csp</groupId>
             <artifactId>sentinel-core</artifactId>
+            <optional>true</optional>
         </dependency>
-        <!-- Sentinel AspectJ -->
+        <!-- Sentinel AspectJ（optional：仅 @RateLimiter 限流功能需要） -->
         <dependency>
             <groupId>com.alibaba.csp</groupId>
             <artifactId>sentinel-annotation-aspectj</artifactId>
+            <optional>true</optional>
         </dependency>
         <!-- Hutool -->
         <dependency>
@@ -60,7 +62,6 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
-            <optional>true</optional>
         </dependency>
         <!-- Spring Cloud OpenFeign -->
         <dependency>
@@ -73,11 +74,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.hnhegui.framework</groupId>
-            <artifactId>hc-common-spring-boot-starter</artifactId>
         </dependency>
     </dependencies>
 

@@ -4,8 +4,8 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.ValueSerializer;
+import com.hc.framework.common.model.Result;
 import com.hc.framework.web.config.WebProperties;
-import com.hc.framework.web.model.Result;
 
 import java.time.format.DateTimeFormatter;
 

@@ -1,7 +1,7 @@
 package com.hc.framework.web.exception;
 
 import com.hc.framework.common.exception.RepeatSubmitException;
-import com.hc.framework.web.model.Result;
+import com.hc.framework.common.model.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;

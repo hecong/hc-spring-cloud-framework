@@ -1,4 +1,4 @@
-package com.hc.framework.mybatis.model;
+package com.hc.framework.common.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  * 有效数据范围信息
  *
- * <p>由 {@link com.hc.framework.mybatis.spi.DataScopeProvider} 计算后返回，
+ * <p>由 {@link com.hc.framework.common.spi.DataScopeProvider} 计算后返回，
  * 包含当前用户对指定菜单的最终数据过滤条件。</p>
  *
  * @author hc-framework

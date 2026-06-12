@@ -1,4 +1,4 @@
-package com.hc.framework.common.model;
+package com.hc.framework.satoken.gateway.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

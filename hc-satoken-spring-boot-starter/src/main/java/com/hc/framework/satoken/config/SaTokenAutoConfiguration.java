@@ -1,11 +1,13 @@
 package com.hc.framework.satoken.config;
 
 import cn.dev33.satoken.stp.StpInterface;
-import com.hc.framework.redis.util.RedisCacheUtils;
+import com.hc.framework.common.spi.PermissionCodeExtractor;
 import com.hc.framework.common.spi.UserContextPermissionProvider;
+import com.hc.framework.redis.util.RedisCacheUtils;
 import com.hc.framework.satoken.handler.SaPermissionProvider;
 import com.hc.framework.satoken.handler.SaTokenAuthLogger;
 import com.hc.framework.satoken.handler.SaTokenExceptionHandler;
+import com.hc.framework.satoken.handler.SaTokenPermissionCodeExtractor;
 import com.hc.framework.satoken.handler.SaTokenStpInterfaceImpl;
 import com.hc.framework.satoken.service.SaJwtTokenService;
 import com.hc.framework.satoken.service.SaPermissionCacheService;
@@ -170,6 +172,19 @@ public class SaTokenAutoConfiguration {
                                      @Autowired(required = false) SaPermissionCacheService cacheService,
                                      @Autowired(required = false) UserContextPermissionProvider userContextPermissionProvider) {
         return new SaTokenStpInterfaceImpl(permissionProvider, cacheService, userContextPermissionProvider);
+    }
+
+    /**
+     * 权限码提取器（Sa-Token 实现）
+     *
+     * <p>从 @SaCheckPermission / @SaCheckOr 注解中提取权限码，
+     * 供数据权限切面在 @DataPermission 未显式指定 value 时使用。</p>
+     * <p>业务项目可通过提供自定义 PermissionCodeExtractor Bean 来覆盖此默认实现。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean(PermissionCodeExtractor.class)
+    public PermissionCodeExtractor permissionCodeExtractor() {
+        return new SaTokenPermissionCodeExtractor();
     }
 
     /**

@@ -6,11 +6,12 @@ import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.handler.MultiDataPermissionHandler;
+import com.hc.framework.common.context.DataPermissionContextHolder;
+import com.hc.framework.common.model.DataScopeInfo;
+import com.hc.framework.common.spi.DataScopeProvider;
 import com.hc.framework.common.spi.UserIdProvider;
 import com.hc.framework.mybatis.constant.DataPermConstants;
-import com.hc.framework.mybatis.handler.DataPermissionContextHolder;
-import com.hc.framework.mybatis.model.DataScopeInfo;
-import com.hc.framework.mybatis.spi.DataScopeProvider;
+import com.hc.framework.mybatis.properties.MyBatisPlusProperties.FailStrategy;
 import com.hc.framework.mybatis.util.CombineExpression;
 import com.hc.framework.mybatis.util.MyBatisUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,8 @@ public class DeptDataPermissionHandler implements MultiDataPermissionHandler, Sm
 
     private final DataScopeProvider dataScopeProvider;
     private final UserIdProvider userIdProvider;
+    private final FailStrategy failStrategy;
+    private final Set<String> extraSkipTables;
 
     /** 含 dept_id 列的表名集合 */
     private final Set<String> deptTables = ConcurrentHashMap.newKeySet();
@@ -61,17 +64,21 @@ public class DeptDataPermissionHandler implements MultiDataPermissionHandler, Sm
     /** 含 tenant_id 列的表名集合 */
     private final Set<String> tenantTables = ConcurrentHashMap.newKeySet();
 
-    /** 表白名单：这些表不进行数据权限过滤 */
-    private static final Set<String> SKIP_TABLES = Set.of(
+    /** 框架默认表白名单：这些表不进行数据权限过滤 */
+    private static final Set<String> DEFAULT_SKIP_TABLES = Set.of(
         "sys_permission", "sys_role", "sys_dept", "sys_config",
         "sys_role_permission", "sys_user_role", "sys_role_data_scope",
         "sys_role_permission_data_scope", "sys_role_perm_dept_scope"
     );
 
     public DeptDataPermissionHandler(DataScopeProvider dataScopeProvider,
-                                       UserIdProvider userIdProvider) {
+                                       UserIdProvider userIdProvider,
+                                       FailStrategy failStrategy,
+                                       Set<String> extraSkipTables) {
         this.dataScopeProvider = dataScopeProvider;
         this.userIdProvider = userIdProvider;
+        this.failStrategy = failStrategy;
+        this.extraSkipTables = extraSkipTables;
     }
 
     // ==================== MultiDataPermissionHandler ====================
@@ -90,9 +97,9 @@ public class DeptDataPermissionHandler implements MultiDataPermissionHandler, Sm
             return null;
         }
 
-        // 3. 表名白名单跳过
+        // 3. 表名白名单跳过（框架默认白名单 + 业务自定义白名单）
         String tableName = table.getName();
-        if (SKIP_TABLES.contains(tableName)) {
+        if (DEFAULT_SKIP_TABLES.contains(tableName) || extraSkipTables.contains(tableName)) {
             return null;
         }
 
@@ -103,7 +110,7 @@ public class DeptDataPermissionHandler implements MultiDataPermissionHandler, Sm
         } catch (Exception e) {
             log.error("[数据权限] 获取数据范围失败 userId={} permissionCode={}",
                 userId, permissionCode, e);
-            return null; // 降级：不追加条件，保证业务可用
+            return handleFail("[数据权限] 获取数据范围异常，降级策略: {}", null);
         }
 
         // 5. ALL 范围 → 无需追加条件（租户隔离也由 provider 在 DataScopeInfo 中处理）
@@ -117,7 +124,7 @@ public class DeptDataPermissionHandler implements MultiDataPermissionHandler, Sm
         } catch (Exception e) {
             log.error("[数据权限] SQL表达式构建失败 userId={} table={} scopeInfo={}",
                 userId, tableName, scopeInfo, e);
-            return null; // 降级：不追加条件
+            return handleFail("[数据权限] SQL表达式构建异常，降级策略: {}", null);
         }
     }
 
@@ -145,7 +152,7 @@ public class DeptDataPermissionHandler implements MultiDataPermissionHandler, Sm
             .combine(deptExpr)
             .combine(userExpr)
             .combine(tenantExpr)
-            .getParenthesis();
+            .combine();
     }
 
     /**
@@ -222,11 +229,27 @@ public class DeptDataPermissionHandler implements MultiDataPermissionHandler, Sm
     // ==================== 辅助方法 ====================
 
     /**
+     * 根据降级策略处理异常
+     *
+     * @param logTemplate 日志模板
+     * @param defaultValue 默认返回值（当前未使用，预留扩展）
+     * @return PERMIT → null（不追加条件）；DENY → EqualsTo(1, 0)（查不到数据）
+     */
+    private Expression handleFail(String logTemplate, Expression defaultValue) {
+        if (failStrategy == FailStrategy.DENY) {
+            log.warn(logTemplate, "DENY — 追加 1=0");
+            return new EqualsTo(new LongValue(1), new LongValue(0));
+        }
+        log.warn(logTemplate, "PERMIT — 不追加条件");
+        return null;
+    }
+
+    /**
      * 获取当前登录用户ID（通过 UserIdProvider SPI，由 sa-token 模块提供实现）
      */
     private Long getCurrentUserId() {
         try {
-            String userIdStr = userIdProvider.get();
+            String userIdStr = userIdProvider.getCurrentUserId();
             if (StrUtil.isBlank(userIdStr)) {
                 return null;
             }

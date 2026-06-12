@@ -36,7 +36,13 @@ public enum DataScopeEnum {
     }
 
     /**
-     * 优先级数值，越大越宽
+     * 优先级数值，值越小权限范围越宽
+     *
+     * <p>优先级从高到低：ALL(0) &gt; DEPT_AND_CHILDREN(1) &gt; CUSTOM_DEPT(2)
+     * &gt; CURRENT_DEPT(3) &gt; SELF(4)</p>
+     *
+     * <p>多角色合并规则：取最宽数据范围（priority 最小的），
+     * 确保用户能看到所有有权访问的数据。</p>
      */
     public int priority() {
         return this.ordinal();

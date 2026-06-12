@@ -18,10 +18,11 @@
     </properties>
 
     <dependencies>
-        <!-- hc-web-spring-boot-starter -->
+        <!-- hc-web-spring-boot-starter（optional：仅在 Servlet 环境下需要，提供全局异常处理、XSS 防护等） -->
         <dependency>
             <groupId>com.hnhegui.framework</groupId>
             <artifactId>hc-web-spring-boot-starter</artifactId>
+            <optional>true</optional>
         </dependency>
         <!-- hc-common-spring-boot-starter -->
         <dependency>

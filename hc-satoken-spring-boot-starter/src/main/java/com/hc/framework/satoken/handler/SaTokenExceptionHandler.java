@@ -6,7 +6,7 @@ import cn.dev33.satoken.exception.NotPermissionException;
 import cn.dev33.satoken.exception.NotRoleException;
 import cn.dev33.satoken.exception.NotSafeException;
 import cn.dev33.satoken.exception.SaTokenException;
-import com.hc.framework.web.model.Result;
+import com.hc.framework.common.model.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;

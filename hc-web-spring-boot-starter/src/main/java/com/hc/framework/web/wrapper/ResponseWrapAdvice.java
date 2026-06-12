@@ -1,7 +1,7 @@
 package com.hc.framework.web.wrapper;
 
+import com.hc.framework.common.model.Result;
 import com.hc.framework.web.config.WebProperties;
-import com.hc.framework.web.model.Result;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;

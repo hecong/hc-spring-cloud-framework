@@ -1,8 +1,7 @@
 package com.hc.framework.mybatis.util;
 
-import com.hc.framework.mybatis.model.DataScopeInfo;
+import com.hc.framework.common.model.DataScopeInfo;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 
@@ -12,8 +11,7 @@ import java.util.List;
 /**
  * 表达式组合工具类
  *
- * <p>用于将多个 JSqlParser Expression 按指定连接符（AND/OR）组合，
- * 外层自动包裹 Parenthesis。</p>
+ * <p>用于将多个 JSqlParser Expression 按指定连接符（AND/OR）组合。</p>
  *
  * @author hc-framework
  * @since 1.0.0
@@ -38,19 +36,19 @@ public class CombineExpression {
     }
 
     /**
-     * 获取组合后的表达式，外层自动加括号
+     * 获取组合后的表达式
      *
      * @return 组合后的 Expression，无任何条件时返回 null
      */
-    public Expression getParenthesis() {
+    public Expression combine() {
         if (expressions.isEmpty()) {
             return null;
         }
         if (expressions.size() == 1) {
-            return new Parenthesis(expressions.get(0));
+            return expressions.getFirst();
         }
 
-        Expression result = expressions.get(0);
+        Expression result = expressions.getFirst();
         for (int i = 1; i < expressions.size(); i++) {
             if (connector == DataScopeInfo.Connector.AND) {
                 result = new AndExpression(result, expressions.get(i));
@@ -58,6 +56,6 @@ public class CombineExpression {
                 result = new OrExpression(result, expressions.get(i));
             }
         }
-        return new Parenthesis(result);
+        return result;
     }
 }

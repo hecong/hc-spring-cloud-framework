@@ -49,10 +49,11 @@ public class LoggingAutoConfiguration {
     }
 
     /**
-     * 限流切面
+     * 限流切面（仅当 classpath 中存在 Sentinel 时才生效）
      */
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnClass(com.alibaba.csp.sentinel.SphU.class)
     @ConditionalOnProperty(prefix = "hc.logging.rate-limit", name = "enabled", havingValue = "true", matchIfMissing = true)
     public RateLimiterAspect rateLimiterAspect(LoggingProperties loggingProperties, UserIdResolver userIdResolver) {
         return new RateLimiterAspect(loggingProperties, userIdResolver);

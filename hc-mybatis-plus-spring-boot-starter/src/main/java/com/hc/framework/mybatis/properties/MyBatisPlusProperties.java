@@ -103,5 +103,25 @@ public class MyBatisPlusProperties {
          * 部门ID展开上限（超出告警并截断）
          */
         private int maxDeptExpandSize = 500;
+
+        /**
+         * 降级策略：permit（放行）/ deny，默认（拒绝，返回 1=0）
+         */
+        private FailStrategy failStrategy = FailStrategy.DENY;
+
+        /**
+         * 额外的跳过表名（框架默认白名单 + 业务自定义白名单）
+         */
+        private java.util.Set<String> skipTables = new java.util.LinkedHashSet<>();
+    }
+
+    /**
+     * 数据权限降级策略
+     */
+    public enum FailStrategy {
+        /** 异常时放行（不追加条件，保证业务可用） */
+        PERMIT,
+        /** 异常时拒绝（追加 1=0，安全优先） */
+        DENY
     }
 }

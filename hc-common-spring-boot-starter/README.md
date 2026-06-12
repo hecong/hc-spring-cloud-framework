@@ -10,7 +10,7 @@
 
 - **常量类**：`CacheConstants`、`DateConstants`、`HttpConstants`、`SystemConstants`
 - **工具类**：`AssertUtils`、`DateUtils`、`IpUtils`、`JsonUtils`、`PageUtils`、`StringUtils`
-- **通用模型**：`Result<T>` 统一响应体、`RepeatSubmitException` 重复提交异常、`DynamicAuthRoute` 动态路由模型
+- **通用模型**：`Result<T>` 统一响应体、`RepeatSubmitException` 重复提交异常
 
 ## 快速开始
 

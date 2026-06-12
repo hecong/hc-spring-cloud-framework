@@ -7,11 +7,13 @@ import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerIntercep
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.hc.framework.common.spi.DataScopeProvider;
+import com.hc.framework.common.spi.PermissionCodeExtractor;
 import com.hc.framework.common.spi.UserIdProvider;
+import com.hc.framework.mybatis.aspect.DataPermissionAspect;
 import com.hc.framework.mybatis.handler.DefaultMetaObjectHandler;
 import com.hc.framework.mybatis.interceptor.DeptDataPermissionHandler;
 import com.hc.framework.mybatis.properties.MyBatisPlusProperties;
-import com.hc.framework.mybatis.spi.DataScopeProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -87,10 +89,30 @@ public class MyBatisPlusConfig {
     public DataPermissionInterceptor dataPermissionInterceptor(DataScopeProvider dataScopeProvider,
                                                                 UserIdProvider userIdProvider,
                                                                 MyBatisPlusProperties properties) {
-        DeptDataPermissionHandler handler = new DeptDataPermissionHandler(dataScopeProvider, userIdProvider);
-        log.info("数据权限拦截器已创建，部门展开上限: {}",
-            properties.getDataPermission().getMaxDeptExpandSize());
+        DeptDataPermissionHandler handler = new DeptDataPermissionHandler(
+            dataScopeProvider, userIdProvider,
+            properties.getDataPermission().getFailStrategy(),
+            properties.getDataPermission().getSkipTables());
+        log.info("数据权限拦截器已创建，部门展开上限: {}，降级策略: {}，额外跳过表: {}",
+            properties.getDataPermission().getMaxDeptExpandSize(),
+            properties.getDataPermission().getFailStrategy(),
+            properties.getDataPermission().getSkipTables());
         return new DataPermissionInterceptor(handler);
+    }
+
+    /**
+     * 数据权限切面
+     *
+     * <p>仅当存在 {@link PermissionCodeExtractor} 实现且配置启用时才注册。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(PermissionCodeExtractor.class)
+    @ConditionalOnProperty(prefix = "hc.mybatis-plus.data-permission", name = "enabled",
+            havingValue = "true", matchIfMissing = true)
+    public DataPermissionAspect dataPermissionAspect(PermissionCodeExtractor extractor) {
+        log.info("数据权限切面已注册，权限码提取器: {}", extractor.getClass().getSimpleName());
+        return new DataPermissionAspect(extractor);
     }
 
     /**
