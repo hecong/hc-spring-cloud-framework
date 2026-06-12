@@ -1,5 +1,7 @@
 package com.hc.framework.mybatis.enums;
 
+import lombok.Getter;
+
 /**
  * 数据权限范围枚举
  *
@@ -25,15 +27,13 @@ public enum DataScopeEnum {
     /** 仅自己数据权限 — 最低优先级 */
     SELF("仅自己数据权限");
 
+    @Getter
     private final String description;
 
     DataScopeEnum(String description) {
         this.description = description;
     }
 
-    public String getDescription() {
-        return description;
-    }
 
     /**
      * 优先级数值，值越小权限范围越宽

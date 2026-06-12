@@ -7,6 +7,7 @@ import com.hc.framework.logging.interceptor.RestTemplateTraceIdInterceptor;
 import com.hc.framework.logging.interceptor.TraceIdInterceptor;
 import com.hc.framework.logging.spi.UserIdResolver;
 import feign.Feign;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -75,7 +76,7 @@ public class LoggingAutoConfiguration {
     public WebMvcConfigurer traceIdWebMvcConfigurer(TraceIdInterceptor traceIdInterceptor) {
         return new WebMvcConfigurer() {
             @Override
-            public void addInterceptors(InterceptorRegistry registry) {
+            public void addInterceptors(@NotNull InterceptorRegistry registry) {
                 registry.addInterceptor(traceIdInterceptor).addPathPatterns("/**");
             }
         };

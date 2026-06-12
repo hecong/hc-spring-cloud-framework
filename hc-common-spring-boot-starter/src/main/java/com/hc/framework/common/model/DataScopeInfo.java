@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -24,6 +25,7 @@ import java.util.Set;
 @AllArgsConstructor
 public class DataScopeInfo implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     /** 是否全部数据权限 */
