@@ -11,7 +11,7 @@ import org.springframework.core.ResolvableType;
 /**
  * 事务消息回查基类（泛型版）
  *
- * <p>与 {@link BaseMqConsumer} 对齐，泛型参数 T 会被自动解析，Checker 子类直接
+ * <p>
  * 操作业务 DTO，无需手动调用 {@code OrderMessageDTO.from(msg)}。</p>
  *
  * <p>使用方式：</p>
