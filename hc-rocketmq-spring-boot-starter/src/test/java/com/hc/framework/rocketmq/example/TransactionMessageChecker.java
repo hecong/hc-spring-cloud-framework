@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@RocketMQTransactionListener(rocketMQTemplateBeanName = "rocketMQClientTemplate")
+@RocketMQTransactionListener
 public class TransactionMessageChecker extends BaseTransactionChecker<TestMessageDTO> {
 
     @Override

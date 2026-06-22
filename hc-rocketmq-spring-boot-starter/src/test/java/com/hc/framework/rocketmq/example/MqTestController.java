@@ -1,6 +1,5 @@
 package com.hc.framework.rocketmq.example;
 
-import com.hc.framework.rocketmq.core.LocalTransactionContext;
 import com.hc.framework.rocketmq.core.RocketMqSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 /**

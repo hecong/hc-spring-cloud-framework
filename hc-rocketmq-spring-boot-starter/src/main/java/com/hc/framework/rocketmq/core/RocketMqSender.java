@@ -1,6 +1,5 @@
 package com.hc.framework.rocketmq.core;
 
-import com.hc.framework.rocketmq.core.LocalTransactionContext;
 import com.hc.framework.rocketmq.util.MdcUtils;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -466,13 +465,13 @@ public class RocketMqSender {
             LocalTransactionContext ctx = new LocalTransactionContext(pair.getTransaction(), mqMessage);
             try {
                 localTransaction.accept(ctx);
-                ctx.getTransaction().commit();
+                ctx.transaction().commit();
                 return result;
             } catch (RuntimeException e) {
-                rollbackSafely(ctx.getTransaction(), e);
+                rollbackSafely(ctx.transaction(), e);
                 throw e;
             } catch (Exception e) {
-                rollbackSafely(ctx.getTransaction(), e);
+                rollbackSafely(ctx.transaction(), e);
                 throw new RuntimeException("本地事务执行失败，事务消息已回滚", e);
             }
         } catch (Exception e) {
