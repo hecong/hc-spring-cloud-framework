@@ -1,23 +1,23 @@
-package com.hc.framework.rocketmq.core;
+package com.hc.framework.rocketmq.core.consumer;
 
 import com.hc.framework.common.util.JsonUtils;
+import com.hc.framework.rocketmq.core.BaseMqMessage;
 import com.hc.framework.rocketmq.util.IdempotentUtils;
 import com.hc.framework.rocketmq.util.MdcUtils;
+import com.hc.framework.rocketmq.util.MessageUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.apis.consumer.ConsumeResult;
 import org.apache.rocketmq.client.apis.message.MessageView;
 import org.apache.rocketmq.client.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ResolvableType;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 通用 MQ 消费者基类（适配 RocketMQ 5.x 官方 Starter）
  *
- * <p>实现 RocketMQListener 接口，子类只需实现 doConsume 方法。泛型参数 T 会被自动解析，
- * 无需重写 {@link #getDataType()}。</p>
+ * <p>实现 RocketMQListener 接口，子类只需实现 doConsume 方法。
+ * 泛型参数 T 通过反射自动解析，无需任何额外配置。</p>
  *
  * <p>使用方式：</p>
  * <pre>{@code
@@ -45,6 +45,13 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
     private IdempotentUtils idempotentUtils;
 
     /**
+     * 消费者日志开关（由配置项 hc.rocketmq.consumer-logger-enable 控制，默认 true）。
+     * 仅控制 info 级别日志，error/warn 始终输出。
+     */
+    @Value("${hc.rocketmq.consumer-logger-enable:true}")
+    private boolean loggerEnabled;
+
+    /**
      * 自动解析的泛型类型（构造时一次性解析缓存）。
      *
      * <p>支持多级继承，例如 {@code class SubConsumer extends OrderConsumer extends BaseMqConsumer<X>}，
@@ -61,8 +68,7 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
         if (resolved == null) {
             throw new IllegalStateException(
                     "无法解析 " + getClass().getName() + " 的泛型参数。"
-                    + "请确保子类明确指定了 BaseMqConsumer<T> 的泛型类型，"
-                    + "或重写 getDataType() 方法手动指定。");
+                    + "请确保子类明确指定了 BaseMqConsumer<T> 的泛型类型。");
         }
         return (Class<T>) resolved;
     }
@@ -72,7 +78,7 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
      */
     @Override
     public ConsumeResult consume(MessageView messageView) {
-        String body = parseMessageBody(messageView.getBody());
+        String body = MessageUtils.byteBufferToString(messageView.getBody());
         BaseMqMessage baseMsg = null;
 
         try {
@@ -93,7 +99,9 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
             String topic = messageView.getTopic();
             String tag = messageView.getTag().orElse(null);
 
-            log.info("[RocketMQ] 开始消费消息 topic:{} tag:{} msgId:{}", topic, tag, msgId);
+            if (loggerEnabled) {
+                log.info("[RocketMQ] 开始消费消息 topic:{} tag:{} msgId:{}", topic, tag, msgId);
+            }
 
             // 3. 幂等检查（原子标记，首次消费返回 true，重复返回 false）
             if (idempotentUtils != null && !idempotentUtils.tryMarkConsumed(msgId)) {
@@ -105,7 +113,9 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
             T businessData = convertData(baseMsg.getData());
             doConsume(businessData);
 
-            log.info("[RocketMQ] 消息消费成功 topic:{} tag:{} msgId:{}", topic, tag, msgId);
+            if (loggerEnabled) {
+                log.info("[RocketMQ] 消息消费成功 topic:{} tag:{} msgId:{}", topic, tag, msgId);
+            }
             return ConsumeResult.SUCCESS;
 
         } catch (Exception e) {
@@ -130,21 +140,7 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
     protected T convertData(Object data) {
         BaseMqMessage tmp = new BaseMqMessage();
         tmp.setData(data);
-        return tmp.getDataAs(getDataType());
-    }
-
-    /**
-     * 获取业务数据类型（用于自动转换）。
-     *
-     * <p>默认返回子类继承 {@code BaseMqConsumer<T>} 时声明的泛型类型（通过反射自动解析）。
-     * 子类无需重写此方法；仅当泛型类型无法被反射解析（如使用原始类型继承）时才需要手动重写。</p>
-     *
-     * @return 业务数据类型
-     * @deprecated 框架已自动解析泛型类型，子类无需重写。保留方法签名仅为向后兼容。
-     */
-    @Deprecated
-    protected Class<T> getDataType() {
-        return resolvedDataType;
+        return tmp.getDataAs(resolvedDataType);
     }
 
     /**
@@ -153,17 +149,5 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
      * @param data 业务数据
      */
     protected abstract void doConsume(T data);
-
-    /**
-     * 安全地解析消息体 ByteBuffer 为字符串
-     */
-    private String parseMessageBody(ByteBuffer buffer) {
-        if (buffer.hasArray()) {
-            return new String(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining(), StandardCharsets.UTF_8);
-        }
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.duplicate().get(bytes);
-        return new String(bytes, StandardCharsets.UTF_8);
-    }
 
 }

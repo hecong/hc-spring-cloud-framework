@@ -1,6 +1,6 @@
 package com.hc.framework.rocketmq.example;
 
-import com.hc.framework.rocketmq.core.BaseTransactionChecker;
+import com.hc.framework.rocketmq.core.transaction.BaseTransactionChecker;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.annotation.RocketMQTransactionListener;
 import org.springframework.stereotype.Component;

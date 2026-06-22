@@ -1,4 +1,6 @@
-package com.hc.framework.rocketmq.core;
+package com.hc.framework.rocketmq.core.transaction;
+
+import com.hc.framework.rocketmq.core.BaseMqMessage;
 
 /**
  * 事务消息日志存储接口。

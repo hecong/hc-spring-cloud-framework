@@ -1,5 +1,6 @@
-package com.hc.framework.rocketmq.core;
+package com.hc.framework.rocketmq.core.transaction;
 
+import com.hc.framework.rocketmq.core.BaseMqMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 

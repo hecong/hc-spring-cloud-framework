@@ -1,6 +1,6 @@
 package com.hc.framework.rocketmq.example;
 
-import com.hc.framework.rocketmq.core.RocketMqSender;
+import com.hc.framework.rocketmq.core.sender.RocketMqSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.apis.producer.SendReceipt;

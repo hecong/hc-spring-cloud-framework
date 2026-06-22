@@ -8,41 +8,65 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.Map;
 
 /**
- * 自动注入 push consumer {@code endpoints} 默认值。
+ * 自动注入 {@code @RocketMQMessageListener} 的默认值。
  *
- * <p>通过实现 RocketMQ 官方的 {@link RocketMQMessageListenerBeanPostProcessor.AnnotationEnhancer}
- * 接口，在 listener 注解处理前将空白的 {@code endpoints} 自动填充为
- * {@code rocketmq.producer.endpoints} 的值。</p>
- *
- * <p><b>机制：</b></p>
+ * <p>当注解属性未显式指定时，自动推导：</p>
  * <ul>
- *     <li>仅在 {@code @RocketMQMessageListener} 的 {@code endpoints} 为空或不配置时生效</li>
- *     <li>用户显式指定的 {@code endpoints} 优先</li>
- *     <li>通过 {@link EnvironmentAware} 直接从 {@link Environment} 读取配置，
- *         避免依赖 {@code RocketMQProperties} bean 的初始化时序问题</li>
+ *     <li>{@code endpoints} → 从 {@code rocketmq.producer.endpoints} 读取</li>
+ *     <li>{@code consumerGroup} → 从 {@code spring.application.name} 推导（格式：{appName}_consumer_group）</li>
+ *     <li>{@code topic} → 从 {@code spring.application.name} 推导（格式：{appName}-topic）</li>
  * </ul>
  *
- * <p>可通过 {@code hc.rocketmq.auto-endpoints=false} 关闭此特性。</p>
+ * <p><b>用户显式指定的值始终优先</b>，自动推导仅在注解属性为空字符串或不填时生效。</p>
+ *
+ * <p>可通过以下配置关闭：</p>
+ * <ul>
+ *     <li>{@code hc.rocketmq.auto-endpoints=false}</li>
+ *     <li>{@code hc.rocketmq.auto-consumer-group=false}</li>
+ *     <li>{@code hc.rocketmq.auto-topic=false}</li>
+ * </ul>
  *
  * @author hc-framework
+ * @since 1.0.0
  */
 public class DefaultEndpointsAnnotationEnhancer
-        implements RocketMQMessageListenerBeanPostProcessor.AnnotationEnhancer, EnvironmentAware {
+    implements RocketMQMessageListenerBeanPostProcessor.AnnotationEnhancer, EnvironmentAware {
 
     private String defaultEndpoints;
+    private String appName;
 
     @Override
     public void setEnvironment(Environment environment) {
         this.defaultEndpoints = environment.getProperty("rocketmq.producer.endpoints", "");
+        this.appName = environment.getProperty("spring.application.name", "");
     }
 
     @Override
     public Map<String, Object> apply(Map<String, Object> attrs, AnnotatedElement element) {
+        enhanceEndpoints(attrs);
+        enhanceConsumerGroup(attrs);
+        enhanceTopic(attrs);
+        return attrs;
+    }
+
+    private void enhanceEndpoints(Map<String, Object> attrs) {
         Object endpoints = attrs.get("endpoints");
-        if ((endpoints == null || endpoints.toString().trim().isEmpty())
-                && !defaultEndpoints.isEmpty()) {
+        if ((endpoints == null || endpoints.toString().trim().isEmpty()) && !defaultEndpoints.isEmpty()) {
             attrs.put("endpoints", defaultEndpoints);
         }
-        return attrs;
+    }
+
+    private void enhanceConsumerGroup(Map<String, Object> attrs) {
+        Object consumerGroup = attrs.get("consumerGroup");
+        if ((consumerGroup == null || consumerGroup.toString().trim().isEmpty()) && !appName.isEmpty()) {
+            attrs.put("consumerGroup", appName.replaceAll("-", "_") + "_consumer_group");
+        }
+    }
+
+    private void enhanceTopic(Map<String, Object> attrs) {
+        Object topic = attrs.get("topic");
+        if ((topic == null || topic.toString().trim().isEmpty()) && !appName.isEmpty()) {
+            attrs.put("topic", appName + "-topic");
+        }
     }
 }

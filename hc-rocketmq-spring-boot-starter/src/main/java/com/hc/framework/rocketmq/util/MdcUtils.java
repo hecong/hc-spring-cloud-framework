@@ -1,5 +1,7 @@
 package com.hc.framework.rocketmq.util;
 
+import com.hc.framework.logging.util.TraceIdUtils;
+import org.dromara.hutool.core.data.id.UUID;
 import org.slf4j.MDC;
 
 /**
@@ -12,10 +14,14 @@ import org.slf4j.MDC;
  */
 public class MdcUtils {
 
-    /** MDC 中 traceId 的 key */
+    /**
+     * MDC 中 traceId 的 key
+     */
     public static final String TRACE_ID_KEY = "traceId";
 
-    /** hc-logging 是否可用 */
+    /**
+     * hc-logging 是否可用
+     */
     private static final boolean TRACE_ID_UTILS_AVAILABLE;
 
     static {
@@ -37,7 +43,7 @@ public class MdcUtils {
      */
     public static String getTraceId() {
         if (TRACE_ID_UTILS_AVAILABLE) {
-            return com.hc.framework.logging.util.TraceIdUtils.getTraceId();
+            return TraceIdUtils.getTraceId();
         }
         return MDC.get(TRACE_ID_KEY);
     }
@@ -50,7 +56,7 @@ public class MdcUtils {
             return;
         }
         if (TRACE_ID_UTILS_AVAILABLE) {
-            com.hc.framework.logging.util.TraceIdUtils.setTraceId(traceId);
+            TraceIdUtils.setTraceId(traceId);
         } else {
             MDC.put(TRACE_ID_KEY, traceId);
         }
@@ -70,9 +76,9 @@ public class MdcUtils {
      */
     public static String generateTraceId() {
         if (TRACE_ID_UTILS_AVAILABLE) {
-            return com.hc.framework.logging.util.TraceIdUtils.generateTraceId();
+            return TraceIdUtils.generateTraceId();
         }
-        return java.util.UUID.randomUUID().toString().replace("-", "");
+        return UUID.randomUUID().toString().replace("-", "");
     }
 
     /**
@@ -80,7 +86,7 @@ public class MdcUtils {
      */
     public static void remove() {
         if (TRACE_ID_UTILS_AVAILABLE) {
-            com.hc.framework.logging.util.TraceIdUtils.removeTraceId();
+            TraceIdUtils.removeTraceId();
         } else {
             MDC.remove(TRACE_ID_KEY);
         }

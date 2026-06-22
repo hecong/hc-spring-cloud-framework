@@ -1,7 +1,7 @@
 package com.hc.framework.rocketmq.example;
 
 import com.hc.framework.common.util.JsonUtils;
-import com.hc.framework.rocketmq.core.BaseMqConsumer;
+import com.hc.framework.rocketmq.core.consumer.BaseMqConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

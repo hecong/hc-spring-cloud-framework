@@ -1,13 +1,12 @@
-package com.hc.framework.rocketmq.core;
+package com.hc.framework.rocketmq.core.transaction;
 
+import com.hc.framework.rocketmq.core.BaseMqMessage;
+import com.hc.framework.rocketmq.util.MessageUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.apis.message.MessageView;
 import org.apache.rocketmq.client.apis.producer.TransactionChecker;
 import org.apache.rocketmq.client.apis.producer.TransactionResolution;
 import org.springframework.core.ResolvableType;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 事务消息回查基类（泛型版）
@@ -39,21 +38,21 @@ public abstract class BaseTransactionChecker<T> implements TransactionChecker {
      */
     @SuppressWarnings("unchecked")
     private final Class<T> dataType = (Class<T>) ResolvableType.forClass(getClass())
-            .as(BaseTransactionChecker.class)
-            .getGeneric(0)
-            .resolve();
+        .as(BaseTransactionChecker.class)
+        .getGeneric(0)
+        .resolve();
 
     public BaseTransactionChecker() {
         if (dataType == null) {
             throw new IllegalStateException(
-                    "无法解析 " + getClass().getName() + " 的泛型参数。"
+                "无法解析 " + getClass().getName() + " 的泛型参数。"
                     + "请确保子类明确指定了 BaseTransactionChecker<T> 的泛型类型。");
         }
     }
 
     @Override
     public TransactionResolution check(MessageView messageView) {
-        BaseMqMessage msg = parseMessage(messageView);
+        BaseMqMessage msg = MessageUtils.parseMessage(messageView);
         if (msg == null) {
             log.error("[RocketMQ] 事务消息解析失败");
             return TransactionResolution.ROLLBACK;
@@ -68,30 +67,6 @@ public abstract class BaseTransactionChecker<T> implements TransactionChecker {
         } catch (Exception e) {
             log.error("[RocketMQ] 事务回查异常 msgId:{}", msg.getMsgId(), e);
             return TransactionResolution.UNKNOWN;
-        }
-    }
-
-    /**
-     * 安全解析消息体
-     */
-    private BaseMqMessage parseMessage(MessageView messageView) {
-        try {
-            ByteBuffer buffer = messageView.getBody();
-            byte[] bytes;
-            if (buffer.hasArray()) {
-                bytes = new byte[buffer.remaining()];
-                System.arraycopy(buffer.array(),
-                        buffer.arrayOffset() + buffer.position(),
-                        bytes, 0, buffer.remaining());
-            } else {
-                bytes = new byte[buffer.remaining()];
-                buffer.duplicate().get(bytes);
-            }
-            String body = new String(bytes, StandardCharsets.UTF_8);
-            return com.hc.framework.common.util.JsonUtils.fromJson(body, BaseMqMessage.class);
-        } catch (Exception e) {
-            log.error("[RocketMQ] 消息解析失败", e);
-            return null;
         }
     }
 
