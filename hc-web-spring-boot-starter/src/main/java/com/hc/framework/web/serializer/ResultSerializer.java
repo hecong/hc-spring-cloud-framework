@@ -3,7 +3,7 @@ package com.hc.framework.web.serializer;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.SerializationContext;
-import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.ser.std.StdSerializer;
 import com.hc.framework.common.model.Result;
 import com.hc.framework.web.config.WebProperties;
 
@@ -17,11 +17,12 @@ import java.time.format.DateTimeFormatter;
  * @author hc-framework
  * @since 1.0.0
  */
-public class ResultSerializer extends ValueSerializer<Result<?>> {
+public class ResultSerializer extends StdSerializer<Result<?>> {
 
     private final WebProperties webProperties;
 
     public ResultSerializer(WebProperties webProperties) {
+        super(Result.class);
         this.webProperties = webProperties;
     }
 

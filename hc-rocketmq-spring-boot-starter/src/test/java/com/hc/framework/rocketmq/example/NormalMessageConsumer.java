@@ -14,12 +14,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-// RocketMQ 5.x gRPC 版本的消费者配置方式请参考官方文档
-// @RocketMQMessageListener(
-//         topic = "TEST_NORMAL_TOPIC",
-//         tag = "TEST_TAG",
-//         consumerGroup = "GID_TEST_NORMAL"
-// )
 public class NormalMessageConsumer extends BaseMqConsumer<TestMessageDTO> {
 
     @Override
@@ -29,12 +23,6 @@ public class NormalMessageConsumer extends BaseMqConsumer<TestMessageDTO> {
 
         // 业务处理逻辑...
         // 业务上也需要实现幂等性处理   防止控制台重放消息
-    }
-
-
-    @Override
-    protected Class<TestMessageDTO> getDataType() {
-        return TestMessageDTO.class;
     }
 
 }

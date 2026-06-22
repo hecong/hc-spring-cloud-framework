@@ -1,5 +1,6 @@
 package com.hc.framework.rocketmq.core;
 
+import com.hc.framework.rocketmq.core.LocalTransactionContext;
 import com.hc.framework.rocketmq.util.MdcUtils;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * RocketMQ 消息发送器
@@ -261,7 +263,7 @@ public class RocketMqSender {
         // 使用线程池执行发送
         asyncExecutor.execute(() -> {
             try {
-                SendReceipt receipt = rocketMQClientTemplate.syncSendNormalMessage(destination, msg);
+                rocketMQClientTemplate.syncSendNormalMessage(destination, msg);
                 log.info("[RocketMQ] 异步消息发送成功 msgId:{}", msg.getMsgId());
             } catch (Exception e) {
                 log.error("[RocketMQ] 异步消息发送失败 msgId:{}", msg.getMsgId(), e);
@@ -318,28 +320,6 @@ public class RocketMqSender {
     // ====================== 7. 事务消息 ======================
 
     /**
-     * 发送事务消息
-     *
-     * <p>事务消息发送后，需要业务层根据本地事务执行结果调用 {@link Transaction#commit()} 或 {@link Transaction#rollback()}</p>
-     *
-     * <p>使用示例：</p>
-     * <pre>{@code
-     * TransactionResult result = rocketMqSender.sendTransaction("TOPIC", "TAG", data);
-     * try {
-     *     // 执行本地事务（如数据库操作）
-     *     doLocalTransaction();
-     *     result.getTransaction().commit();
-     * } catch (Exception e) {
-     *     result.getTransaction().rollback();
-     * }
-     * }</pre>
-     *
-     * @param topic 主题
-     * @param tag   标签
-     * @param data  业务数据
-     * @return TransactionResult 包含 SendReceipt 和 Transaction
-     */
-    /**
      * 发送事务消息（使用默认 Template，适用于单 Checker 场景）
      */
     public TransactionResult sendTransaction(String topic, String tag, Object data) {
@@ -354,10 +334,10 @@ public class RocketMqSender {
      *
      * <pre>{@code
      * // 发送时指定模板名
-     * rocketMqSender.sendTransaction("orderPayRocketMQClientTemplate", "OrderTopic", "paid", order);
+     * rocketMqSender.sendTransaction("orderPayTransTemplate", "OrderTopic", "paid", order);
      *
      * // Checker 上写对应的模板名
-     * @RocketMQTransactionListener(rocketMQTemplateBeanName = "orderPayRocketMQClientTemplate")
+     * @RocketMQTransactionListener(rocketMQTemplateBeanName = "orderPayTransTemplate")
      * public class OrderPayChecker extends BaseTransactionChecker { ... }
      * }</pre>
      *
@@ -383,6 +363,8 @@ public class RocketMqSender {
     private TransactionResult sendTransaction(RocketMQClientTemplate template,
             String topic, String tag, Object data) {
         BaseMqMessage msg = build(data);
+        msg.setTopic(topic);
+        msg.setTag(tag);
         String destination = buildDestination(topic, tag);
         try {
             log.info("[RocketMQ] 发送事务消息 topic:{} tag:{} msgId:{}",
@@ -408,6 +390,107 @@ public class RocketMqSender {
      */
     public TransactionResult sendTransaction(String topic, Object data) {
         return sendTransaction(topic, "*", data);
+    }
+
+    // ====================== 事务消息（Lambda 重载，内置 commit/rollback） ======================
+
+    /**
+     * 发送事务消息并执行本地事务（使用默认 Template，返回 LocalTransactionContext）。
+     *
+     * <p>框架自动处理 commit/rollback：</p>
+     * <ul>
+     *     <li>localTransaction 正常返回 → 自动 {@link Transaction#commit()}</li>
+     *     <li>localTransaction 抛异常 → 自动 {@link Transaction#rollback()}，并抛出原始异常</li>
+     * </ul>
+     *
+     * <p>使用示例：</p>
+     * <pre>{@code
+     * rocketMqSender.sendTransaction("TOPIC", "TAG", data, ctx -> {
+     *     transactionTemplate.executeWithoutResult(status -> {
+     *         transactionLogStore.save(ctx.getMessage());  // 同一事务内持久化消息日志
+     *         doLocalBusiness();
+     *     });
+     * });
+     * }</pre>
+     *
+     * @param topic            主题
+     * @param tag              标签
+     * @param data             业务数据
+     * @param localTransaction 本地事务逻辑，参数为 LocalTransactionContext（含 Transaction + BaseMqMessage）
+     * @return TransactionResult 包含 SendReceipt 和 Transaction
+     */
+    public TransactionResult sendTransaction(String topic, String tag, Object data,
+                                             Consumer<LocalTransactionContext> localTransaction) {
+        return sendTransaction(rocketMQClientTemplate, topic, tag, data, localTransaction);
+    }
+
+    /**
+     * 发送事务消息并执行本地事务（指定 Template Bean 名称，返回 LocalTransactionContext）。
+     *
+     * @param templateBeanName RocketMQClientTemplate 的 Bean 名称
+     * @param topic            主题
+     * @param tag              标签
+     * @param data             业务数据
+     * @param localTransaction 本地事务逻辑
+     * @return TransactionResult 包含 SendReceipt 和 Transaction
+     * @throws IllegalArgumentException 如果指定名称的 Template 不存在
+     */
+    public TransactionResult sendTransaction(String templateBeanName, String topic, String tag,
+                                             Object data, Consumer<LocalTransactionContext> localTransaction) {
+        RocketMQClientTemplate template = templateMap.get(templateBeanName);
+        if (template == null) {
+            throw new IllegalArgumentException(
+                    "未找到 RocketMQ Template Bean: " + templateBeanName
+                    + "。请检查 @RocketMQTransactionListener 的 rocketMQTemplateBeanName 是否与此处一致。"
+                    + " 可用 Template: " + templateMap.keySet());
+        }
+        return sendTransaction(template, topic, tag, data, localTransaction);
+    }
+
+    private TransactionResult sendTransaction(RocketMQClientTemplate template, String topic, String tag,
+                                              Object data, Consumer<LocalTransactionContext> localTransaction) {
+        BaseMqMessage mqMessage = build(data);
+        mqMessage.setTopic(topic);
+        mqMessage.setTag(tag);
+        String destination = buildDestination(topic, tag);
+        try {
+            log.info("[RocketMQ] 发送事务消息 topic:{} tag:{} msgId:{}",
+                    topic, tag, mqMessage.getMsgId());
+            Pair<SendReceipt, Transaction> pair = template.sendTransactionMessage(
+                    destination,
+                    MessageBuilder.withPayload(mqMessage).build()
+            );
+            log.info("[RocketMQ] 事务消息发送成功 msgId:{}", mqMessage.getMsgId());
+            TransactionResult result = new TransactionResult(pair.getSendReceipt(), pair.getTransaction());
+
+            LocalTransactionContext ctx = new LocalTransactionContext(pair.getTransaction(), mqMessage);
+            try {
+                localTransaction.accept(ctx);
+                ctx.getTransaction().commit();
+                return result;
+            } catch (RuntimeException e) {
+                rollbackSafely(ctx.getTransaction(), e);
+                throw e;
+            } catch (Exception e) {
+                rollbackSafely(ctx.getTransaction(), e);
+                throw new RuntimeException("本地事务执行失败，事务消息已回滚", e);
+            }
+        } catch (Exception e) {
+            log.error("[RocketMQ] 事务消息发送失败 topic:{} tag:{} msgId:{}",
+                    topic, tag, mqMessage.getMsgId(), e);
+            throw new RuntimeException("事务消息发送失败", e);
+        }
+    }
+
+    /**
+     * 回滚事务并吞掉回滚异常（避免掩盖原始业务异常）。
+     */
+    private void rollbackSafely(Transaction transaction, Exception cause) {
+        try {
+            transaction.rollback();
+        } catch (Exception rollbackEx) {
+            log.error("[RocketMQ] 事务消息回滚失败，原始异常将被向上抛出", rollbackEx);
+        }
     }
 
     // ====================== 私有方法 ======================

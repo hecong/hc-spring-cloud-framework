@@ -129,7 +129,7 @@ public class ExcelAsyncExecutor {
      * @param errorHandler     错误处理器
      * @param progressCallback 进度回调
      */
-    @Async("excelAsyncExecutor")
+    @Async("excelAsyncTaskExecutor")
     public <T> void executeImport(String taskId, ExcelImportRequest request, Class<T> clazz,
                                   int batchSize, Consumer<List<T>> batchHandler,
                                   Consumer<ExcelImportResult.ErrorRow<T>> errorHandler,
@@ -175,7 +175,7 @@ public class ExcelAsyncExecutor {
      * @param clazz            数据类型
      * @param progressCallback 进度回调
      */
-    @Async("excelAsyncExecutor")
+    @Async("excelAsyncTaskExecutor")
     public <T> void executeExport(String taskId, ExcelExportRequest request,
                                   Supplier<List<T>> dataQuery, Class<T> clazz,
                                   Consumer<ExcelTaskStatus> progressCallback) {
@@ -233,7 +233,7 @@ public class ExcelAsyncExecutor {
      * @param clazz            数据类型
      * @param progressCallback 进度回调
      */
-    @Async("excelAsyncExecutor")
+    @Async("excelAsyncTaskExecutor")
     public <T> void executeExportAll(String taskId, ExcelExportRequest request,
                                      Supplier<List<T>> allDataQuery, Class<T> clazz,
                                      Consumer<ExcelTaskStatus> progressCallback) {
@@ -287,7 +287,7 @@ public class ExcelAsyncExecutor {
      * @param dataQuery        数据查询
      * @param progressCallback 进度回调
      */
-    @Async("excelAsyncExecutor")
+    @Async("excelAsyncTaskExecutor")
     public <T> void executeTemplateExport(String taskId, TemplateExportRequest request,
                                           Supplier<List<T>> dataQuery,
                                           Consumer<ExcelTaskStatus> progressCallback) {
@@ -354,7 +354,7 @@ public class ExcelAsyncExecutor {
      * @param dataQuery        数据查询
      * @param progressCallback 进度回调
      */
-    @Async("excelAsyncExecutor")
+    @Async("excelAsyncTaskExecutor")
     public void executeDynamicHeadExport(String taskId, String sheetName,
                                          List<DynamicHead> heads,
                                          Supplier<List<Map<String, Object>>> dataQuery,

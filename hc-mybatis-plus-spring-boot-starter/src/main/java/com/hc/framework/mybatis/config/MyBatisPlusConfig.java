@@ -23,6 +23,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 /**
  * MyBatis-Plus 自动配置类
  *
@@ -86,7 +87,7 @@ public class MyBatisPlusConfig {
     @ConditionalOnBean(DataScopeProvider.class)
     @ConditionalOnProperty(prefix = "hc.mybatis-plus.data-permission", name = "enabled",
         havingValue = "true", matchIfMissing = true)
-    public DataPermissionInterceptor dataPermissionInterceptor(DataScopeProvider dataScopeProvider,
+    public DataPermissionInterceptor dataPermissionInterceptor(@Lazy DataScopeProvider dataScopeProvider,
                                                                 UserIdProvider userIdProvider,
                                                                 MyBatisPlusProperties properties) {
         DeptDataPermissionHandler handler = new DeptDataPermissionHandler(

@@ -7,8 +7,11 @@
 ## 功能特性
 
 - **消息发送**：`RocketMqSender` 统一发送封装（同步、异步、批量、顺序、延迟、单向、事务）
-- **消息消费**：`BaseMqConsumer` 消费者基类，只需实现 `doConsume(T data)` 即可
-- **事务消息**：`BaseTransactionChecker` 事务回查基类
+- **消息消费**：`BaseMqConsumer<T>` 消费者基类，泛型自动解析，只需实现 `doConsume(T data)` 即可
+- **事务消息 Lambda API**：`sendTransaction(... Consumer<Transaction>)` 内置 commit/rollback
+- **事务回查泛型化**：`BaseTransactionChecker<T>` 自动反序列化业务 DTO，不再需要手动 `from(msg)`
+- **多 Producer 配置简化**：`RocketMQBaseConfig` 提供 `buildTransactionProducer()` / `buildTransactionTemplate()` helper，每事务 5 行
+- **端点自动注入**：push consumer 的 `endpoints` 自动复用 `rocketmq.producer.endpoints`
 - **幂等消费**：基于 Redis 的原子标记，业务失败时自动清除标记允许重试
 - **TraceId 传递**：自动在 MQ 消息中携带 TraceId（需要 hc-logging，缺失时降级为 MDC）
 
@@ -48,10 +51,10 @@ public class OrderService {
         rocketMqSender.sendAsync("NotifyTopic", "sms", notify);
     }
 
-    // 3. 延迟消息（30秒后投递）
+    // 3. 延迟消息（30 分钟后投递）
     public void delayCheck(Long orderId) {
         rocketMqSender.sendDelay("OrderTopic", "timeout", orderId,
-                Duration.ofSeconds(30));
+                30, TimeUnit.MINUTES);
     }
 
     // 4. 顺序消息（相同 messageGroup 内保证顺序）
@@ -60,43 +63,29 @@ public class OrderService {
                 dto.getWarehouseId());  // 同仓库的消息串行处理
     }
 
-    // 5. 批量发送（返回成功数）
-    public void batchSync(List<OrderDTO> orders) {
-        int successCount = rocketMqSender.sendBatch("OrderTopic", "sync", orders);
-        if (successCount < orders.size()) {
-            log.warn("批量发送部分失败: {}/{}", successCount, orders.size());
-        }
-    }
-
-    // 6. 事务消息（单场景，使用默认模板）
+    // 5. 事务消息 — Lambda API（框架自动 commit/rollback）
     public void payOrder(OrderDTO order) {
-        TransactionResult result = rocketMqSender.sendTransaction(
-                "OrderTopic", "paid", order);
-        doTransaction(result, () -> orderService.doPay(order));
+        rocketMqSender.sendTransaction("OrderTopic", "paid", order,
+                tx -> transactionTemplate.executeWithoutResult(status -> {
+                    orderMapper.updateStatus(order.getOrderNo(), PAID);
+                    payMapper.insert(buildPayRecord(order));
+                }));
     }
 
-    // 6b. 事务消息（多场景，指定模板名。模板名 = Checker 的 rocketMQTemplateBeanName）
-    public void createOrder(OrderDTO order) {
-        TransactionResult result = rocketMqSender.sendTransaction(
-                "orderCreateRocketMQClientTemplate", "OrderTopic", "create", order);
-        doTransaction(result, () -> orderService.doCreate(order));
-    }
-
-    private void doTransaction(TransactionResult result, Runnable localTx) {
-        try {
-            localTx.run();
-            result.getTransaction().commit();
-        } catch (Exception e) {
-            result.getTransaction().rollback();
-            throw e;
-        }
+    // 6. 事务消息 — 多场景指定 Template
+    public void cancelOrder(OrderDTO order) {
+        rocketMqSender.sendTransaction("orderCancelTransTemplate",
+                "OrderTopic", "cancelled", order,
+                tx -> transactionTemplate.executeWithoutResult(status -> {
+                    orderMapper.updateStatus(order.getOrderNo(), CANCELLED);
+                }));
     }
 }
 ```
 
 ### 二、消费消息
 
-继承 `BaseMqConsumer<T>`，实现 `doConsume` 和 `getDataType`：
+继承 `BaseMqConsumer<T>`，只实现 `doConsume(T data)`。泛型类型自动解析，**无需重写 `getDataType()`**：
 
 ```java
 @Component
@@ -104,13 +93,9 @@ public class OrderService {
     topic = "OrderTopic",
     tag = "create",
     consumerGroup = "order-create-group"
+    // endpoints 会自动注入 rocketmq.producer.endpoints，无需手动指定
 )
 public class OrderCreateConsumer extends BaseMqConsumer<OrderDTO> {
-
-    @Override
-    protected Class<OrderDTO> getDataType() {
-        return OrderDTO.class;
-    }
 
     @Override
     protected void doConsume(OrderDTO order) {
@@ -136,77 +121,92 @@ public class OrderCreateConsumer extends BaseMqConsumer<OrderDTO> {
 
 #### 单 Checker 场景（默认 Template）
 
-只有一个事务场景时，使用默认 Template 即可：
-
 ```java
-// 发送
-rocketMqSender.sendTransaction("OrderTopic", "paid", order);
+// 发送 — Lambda API
+rocketMqSender.sendTransaction("OrderTopic", "paid", order,
+        tx -> orderService.doPay(order));
 
-// Checker
+// Checker — 泛型自动反序列化
 @Component
 @RocketMQTransactionListener(rocketMQTemplateBeanName = "rocketMQClientTemplate")
-public class OrderPayChecker extends BaseTransactionChecker {
+public class OrderPayChecker extends BaseTransactionChecker<OrderDTO> {
     @Override
-    protected boolean doCheckTransaction(BaseMqMessage msg) {
-        return orderService.isOrderPaid(msg);  // 检查支付状态
+    protected boolean doCheckTransaction(OrderDTO order) {
+        return orderService.isOrderPaid(order.getOrderNo());
     }
 }
 ```
 
-#### 多 Checker 场景（如订单创建 + 订单支付）
+#### 多 Checker 场景（订单创建 + 订单支付）
 
-当多个事务场景并存时，**Template Bean 名 = `@RocketMQTransactionListener` 的 `rocketMQTemplateBeanName`**：
+当多个事务场景并存时，**继承 `RocketMQBaseConfig`** 并使用 helper 方法，每事务仅需 5 行：
 
-**Step 1：定义多个 Template Bean**
+**Step 0：配置类（A-lite 简化版）**
 
 ```java
 @Configuration
-public class MqTemplateConfig {
+public class RocketMQTransactionConfig extends RocketMQBaseConfig {
 
-    @Bean
-    public RocketMQClientTemplate orderCreateRocketMQClientTemplate(
-            RocketMQProperties properties) {
-        return createTemplate(properties, "order-create-producer");
+    // ========== 订单创建事务 ==========
+    @Bean(name = "orderCreateTransProducer", destroyMethod = "close")
+    public Producer orderCreateTransProducer(ClientServiceProvider provider,
+                                             OrderCreateChecker checker,
+                                             RocketMQProperties props) throws ClientException {
+        return buildTransactionProducer(provider, checker, props, "OrderTopic");
     }
 
     @Bean
-    public RocketMQClientTemplate orderPayRocketMQClientTemplate(
-            RocketMQProperties properties) {
-        return createTemplate(properties, "order-pay-producer");
+    public RocketMQClientTemplate orderCreateTransTemplate(
+            @Qualifier("orderCreateTransProducer") Producer producer) {
+        return buildTransactionTemplate(producer);
+    }
+
+    // ========== 订单支付事务 ==========
+    @Bean(name = "orderPayTransProducer", destroyMethod = "close")
+    public Producer orderPayTransProducer(ClientServiceProvider provider,
+                                          OrderPayChecker checker,
+                                          RocketMQProperties props) throws ClientException {
+        return buildTransactionProducer(provider, checker, props, "OrderTopic");
+    }
+
+    @Bean
+    public RocketMQClientTemplate orderPayTransTemplate(
+            @Qualifier("orderPayTransProducer") Producer producer) {
+        return buildTransactionTemplate(producer);
     }
 }
 ```
 
-**Step 2：发送时指定 Template 名**
+> `buildTransactionProducer()` / `buildTransactionTemplate()` 由 `RocketMQBaseConfig` 提供，封装了 Producer 构建和 Template 绑定逻辑。
+
+**Step 1：发送时指定 Template Bean 名 + Lambda 事务**
 
 ```java
-// 订单创建 → 用 orderCreateRocketMQClientTemplate
-rocketMqSender.sendTransaction("orderCreateRocketMQClientTemplate",
-        "OrderTopic", "create", order);
+rocketMqSender.sendTransaction("orderCreateTransTemplate", "OrderTopic", "create", order,
+        tx -> transactionTemplate.executeWithoutResult(s -> orderService.create(order)));
 
-// 订单支付 → 用 orderPayRocketMQClientTemplate
-rocketMqSender.sendTransaction("orderPayRocketMQClientTemplate",
-        "OrderTopic", "paid", order);
+rocketMqSender.sendTransaction("orderPayTransTemplate", "OrderTopic", "paid", order,
+        tx -> transactionTemplate.executeWithoutResult(s -> orderService.pay(order)));
 ```
 
-**Step 3：Checker 上配对同名**
+**Step 2：Checker 声明 rocketMQTemplateBeanName + 泛型**
 
 ```java
 @Component
-@RocketMQTransactionListener(rocketMQTemplateBeanName = "orderCreateRocketMQClientTemplate")
-public class OrderCreateChecker extends BaseTransactionChecker {
+@RocketMQTransactionListener(rocketMQTemplateBeanName = "orderCreateTransTemplate")
+public class OrderCreateChecker extends BaseTransactionChecker<OrderDTO> {
     @Override
-    protected boolean doCheckTransaction(BaseMqMessage msg) {
-        return orderService.isOrderCreated(msg);
+    protected boolean doCheckTransaction(OrderDTO order) {
+        return orderService.isOrderCreated(order.getOrderNo());
     }
 }
 
 @Component
-@RocketMQTransactionListener(rocketMQTemplateBeanName = "orderPayRocketMQClientTemplate")
-public class OrderPayChecker extends BaseTransactionChecker {
+@RocketMQTransactionListener(rocketMQTemplateBeanName = "orderPayTransTemplate")
+public class OrderPayChecker extends BaseTransactionChecker<OrderDTO> {
     @Override
-    protected boolean doCheckTransaction(BaseMqMessage msg) {
-        return orderService.isOrderPaid(msg);
+    protected boolean doCheckTransaction(OrderDTO order) {
+        return orderService.isOrderPaid(order.getOrderNo());
     }
 }
 ```
@@ -214,9 +214,9 @@ public class OrderPayChecker extends BaseTransactionChecker {
 > **配对关系**：`sendTransaction("xxx", ...)` 的 `xxx` = `@RocketMQTransactionListener(rocketMQTemplateBeanName = "xxx")`。
 > 如果 Template 名写错，发送时会抛出 `IllegalArgumentException` 并列出所有可用 Template。
 
-#### 事务消息使用注意事项
+#### 事务消息注意事项
 
-1. 发送后必须调用 `result.getTransaction().commit()` 或 `rollback()`
+1. **推荐使用 Lambda API**（`sendTransaction(... Consumer<Transaction>)`），框架自动处理 commit/rollback。Lambda 正常返回 → commit，抛异常 → rollback
 2. 如果 `commit()` 之前进程崩溃，RocketMQ 会回调 `Checker.check()` 确认状态
 3. `Checker.check()` 返回 `true` = 提交消息，`false` = 回滚，抛异常 = UNKNOWN（稍后重试）
 
@@ -278,21 +278,25 @@ protected void doConsume(OrderDTO order) {
 ```yaml
 hc:
   rocketmq:
-    enabled: true      # 是否启用框架自动配置（默认 true）
+    enabled: true           # 是否启用框架自动配置（默认 true）
+    auto-endpoints: true    # 是否自动为 push consumer 注入 endpoints（默认 true）
 ```
 
 ### RocketMQ 5.x 客户端配置
 
 ```yaml
 rocketmq:
-  endpoints: localhost:8081           # gRPC Proxy 地址
   producer:
-    topics: OrderTopic;NotifyTopic    # 生产者主题列表
-    max-attempts: 3
+    endpoints: localhost:8081         # gRPC Proxy 地址（生产者 + push consumer 共用）
+    request-timeout: 3                # 请求超时（秒）
+    max-attempts: 3                   # 最大重试次数
   simple-consumer:
-    topics: OrderTopic:create:order-create-group  # 主题:标签:消费组
-    await-duration: 30s
+    endpoints: ${rocketmq.producer.endpoints}  # consumer endpoints，通常复用 producer 的
+    consumer-group: test-group
+    await-duration: 30                # 消费等待时长（秒）
 ```
+
+> **端点自动注入**：对于 push consumer（`@RocketMQMessageListener`），如果未指定 `endpoints`，框架会自动注入 `rocketmq.producer.endpoints` 的值。可通过 `hc.rocketmq.auto-endpoints=false` 关闭此特性。
 
 ### Redis 幂等配置（可选）
 
@@ -316,7 +320,7 @@ spring:
 
 | 依赖 | 是否必需 | 用途 |
 |---|---|---|
-| Java 17 | 必需 | 运行环境 |
+| Java 21 | 必需 | 运行环境 |
 | RocketMQ 5.x gRPC Client | 必需 | 消息队列核心 |
 | hc-common-spring-boot-starter | 必需 | JSON 序列化 |
 | spring-boot-starter | 必需 | Spring 容器 |

@@ -32,8 +32,8 @@ public class ExcelAsyncConfig {
      *
      * <p>使用 TTL 包装线程池，确保子线程能获取父线程的上下文信息</p>
      */
-    @Bean("excelAsyncExecutor")
-    public Executor excelAsyncExecutor(ExcelAsyncPoolProperties properties) {
+    @Bean("excelAsyncTaskExecutor")
+    public Executor excelAsyncTaskExecutor(ExcelAsyncPoolProperties properties) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(properties.getCorePoolSize());
         executor.setMaxPoolSize(properties.getMaxPoolSize());

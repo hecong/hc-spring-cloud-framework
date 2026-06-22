@@ -1,5 +1,6 @@
 package com.hc.framework.rocketmq.example;
 
+import com.hc.framework.rocketmq.core.LocalTransactionContext;
 import com.hc.framework.rocketmq.core.RocketMqSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 /**
@@ -114,36 +116,25 @@ public class MqTestController {
         return "单向消息已发送";
     }
 
-    /**
-     * 发送事务消息
-     *
-     * @param content 消息内容
-     * @return 发送结果
-     */
-    @GetMapping("/transaction")
-    public String sendTransaction(
-            @RequestParam(defaultValue = "Hello Transaction") String content) {
-        TestMessageDTO dto = buildDto(content);
-        // 发送事务消息
-        var result = rocketMqSender.sendTransaction("TEST_TRANS_TOPIC", "TEST_TAG", dto);
-
-        try {
-            // 执行本地事务（如数据库操作）
-            // doLocalTransaction();
-
-            // 提交事务
-            result.getTransaction().commit();
-            return "事务消息发送成功并提交: " + result.getMessageId();
-        } catch (Exception e) {
-            // 回滚事务
-            try {
-                result.getTransaction().rollback();
-            } catch (Exception rollbackEx) {
-                log.error("事务回滚失败", rollbackEx);
-            }
-            return "事务消息已回滚: " + e.getMessage();
-        }
-    }
+//    /**
+//     * 发送事务消息（Lambda API — 推荐）
+//     *
+//     * @param content 消息内容
+//     * @return 发送结果
+//     */
+//    @GetMapping("/transaction")
+//    public String sendTransaction(
+//            @RequestParam(defaultValue = "Hello Transaction") String content) {
+//        TestMessageDTO dto = buildDto(content);
+//        // Lambda API：框架自动 commit，抛异常自动 rollback
+//        rocketMqSender.sendTransaction("TEST_TRANS_TOPIC", "TEST_TAG", dto,
+//            (Consumer<LocalTransactionContext>) tx -> {
+//                // 执行本地事务（如数据库操作）
+//                // doLocalTransaction(dto);
+//                log.info("本地事务执行成功");
+//            });
+//        return "事务消息已发送并提交";
+//    }
 
     /**
      * 构建测试 DTO

@@ -8,6 +8,7 @@ import org.apache.rocketmq.client.apis.consumer.ConsumeResult;
 import org.apache.rocketmq.client.apis.message.MessageView;
 import org.apache.rocketmq.client.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ResolvableType;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -15,7 +16,8 @@ import java.nio.charset.StandardCharsets;
 /**
  * 通用 MQ 消费者基类（适配 RocketMQ 5.x 官方 Starter）
  *
- * <p>实现 RocketMQListener 接口，子类只需实现 doConsume 方法</p>
+ * <p>实现 RocketMQListener 接口，子类只需实现 doConsume 方法。泛型参数 T 会被自动解析，
+ * 无需重写 {@link #getDataType()}。</p>
  *
  * <p>使用方式：</p>
  * <pre>{@code
@@ -26,11 +28,6 @@ import java.nio.charset.StandardCharsets;
  *     consumerGroup = "order-group"
  * )
  * public class OrderConsumer extends BaseMqConsumer<OrderDTO> {
- *     @Override
- *     protected Class<OrderDTO> getDataType() {
- *         return OrderDTO.class;
- *     }
- *
  *     @Override
  *     protected void doConsume(OrderDTO order) {
  *         // 业务处理
@@ -46,6 +43,29 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
 
     @Autowired(required = false)
     private IdempotentUtils idempotentUtils;
+
+    /**
+     * 自动解析的泛型类型（构造时一次性解析缓存）。
+     *
+     * <p>支持多级继承，例如 {@code class SubConsumer extends OrderConsumer extends BaseMqConsumer<X>}，
+     * 会沿着继承链找到 {@link BaseMqConsumer} 的第一个泛型参数。</p>
+     */
+    private final Class<T> resolvedDataType = resolveDataType();
+
+    @SuppressWarnings("unchecked")
+    private Class<T> resolveDataType() {
+        Class<?> resolved = ResolvableType.forClass(getClass())
+                .as(BaseMqConsumer.class)
+                .getGeneric(0)
+                .resolve();
+        if (resolved == null) {
+            throw new IllegalStateException(
+                    "无法解析 " + getClass().getName() + " 的泛型参数。"
+                    + "请确保子类明确指定了 BaseMqConsumer<T> 的泛型类型，"
+                    + "或重写 getDataType() 方法手动指定。");
+        }
+        return (Class<T>) resolved;
+    }
 
     /**
      * 消费消息（实现 RocketMQListener 接口）
@@ -102,31 +122,30 @@ public abstract class BaseMqConsumer<T> implements RocketMQListener {
     }
 
     /**
-     * 转换业务数据
+     * 转换业务数据（委托到 {@link BaseMqMessage#getDataAs(Class)}）。
      *
      * @param data 原始数据
      * @return 转换后的业务数据
      */
-    @SuppressWarnings("unchecked")
     protected T convertData(Object data) {
-        // 默认实现：假设 data 是 Map 类型，转换为泛型 T
-        if (data instanceof java.util.Map) {
-            return JsonUtils.fromMap((java.util.Map<?, ?>) data, getDataType());
-        }
-        // 如果 data 已经是目标类型，直接返回
-        if (getDataType().isInstance(data)) {
-            return (T) data;
-        }
-        // 否则尝试 JSON 转换
-        return JsonUtils.fromJson(JsonUtils.toJson(data), getDataType());
+        BaseMqMessage tmp = new BaseMqMessage();
+        tmp.setData(data);
+        return tmp.getDataAs(getDataType());
     }
 
     /**
-     * 获取业务数据类型（用于自动转换）
+     * 获取业务数据类型（用于自动转换）。
+     *
+     * <p>默认返回子类继承 {@code BaseMqConsumer<T>} 时声明的泛型类型（通过反射自动解析）。
+     * 子类无需重写此方法；仅当泛型类型无法被反射解析（如使用原始类型继承）时才需要手动重写。</p>
      *
      * @return 业务数据类型
+     * @deprecated 框架已自动解析泛型类型，子类无需重写。保留方法签名仅为向后兼容。
      */
-    protected abstract Class<T> getDataType();
+    @Deprecated
+    protected Class<T> getDataType() {
+        return resolvedDataType;
+    }
 
     /**
      * 子类实现具体的业务消费逻辑

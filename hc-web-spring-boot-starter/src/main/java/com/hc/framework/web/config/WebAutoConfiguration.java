@@ -5,27 +5,24 @@ import com.hc.framework.web.serializer.ResultSerializer;
 import com.hc.framework.web.wrapper.ResponseWrapAdvice;
 import com.hc.framework.web.xss.XssFilter;
 import com.hc.framework.web.xss.XssStringDeserializer;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.module.SimpleModule;
 
 /**
  * Web Starter 自动配置类
  *
- * <p>通过 {@link ObjectMapper#rebuild()} 在 Spring 托管的 ObjectMapper 基础上注册自定义 Module，
+ * <p>通过 {@link JsonMapperBuilderCustomizer} 在 Spring Boot 构建 JsonMapper 时注入自定义 Module，
  * 所有 {@code MappingJackson2HttpMessageConverter} 共享同一个 ObjectMapper。</p>
  *
- * <p>Jackson 3.x 的 ObjectMapper 是不可变的，因此通过 @Primary Bean 覆盖 Boot 默认实例，
- * 确保 ResultSerializer 和 XssStringDeserializer 生效。</p>
+ * <p>Jackson 3.x 的 ObjectMapper 是不可变的，因此通过 Builder 层面定制，
+ * 而非创建 @Primary 覆盖 —— 避免与 Boot 自身的 jacksonJsonMapper 冲突。</p>
  *
  * @author hc-framework
  * @since 1.0.0
@@ -42,23 +39,17 @@ public class WebAutoConfiguration {
     }
 
     /**
-     * 注册自定义 Jackson Module：ResultSerializer + XssStringDeserializer
-     * <p>
-     * Jackson 3.x 的 ObjectMapper 不可变，需通过 rebuild() 创建新实例。
-     * 使用 @Primary 确保 MVC 的 HttpMessageConverter 使用此定制版本。
-     *
-     *   自动配置的 ObjectMapper（可能为空，如测试环境）
+     * 通过 {@link JsonMapperBuilderCustomizer} 向 Boot 的 JsonMapper.Builder 注册
+     * ResultSerializer 和 XssStringDeserializer，确保定制模块融入统一的 ObjectMapper。
      */
     @Bean
-    @Primary
-    public ObjectMapper customObjectMapper(ObjectProvider<ObjectMapper> bootMapperProvider) {
-        ObjectMapper base = bootMapperProvider.getIfAvailable(() -> JsonMapper.builder().build());
-        SimpleModule module = new SimpleModule();
-        module.addSerializer(new ResultSerializer(webProperties));
-        module.addDeserializer(String.class, new XssStringDeserializer());
-        return base.rebuild()
-            .addModule(module)
-            .build();
+    public JsonMapperBuilderCustomizer jsonMapperBuilderCustomizer() {
+        return builder -> {
+            SimpleModule module = new SimpleModule();
+            module.addSerializer(new ResultSerializer(webProperties));
+            module.addDeserializer(String.class, new XssStringDeserializer());
+            builder.addModule(module);
+        };
     }
 
     @Bean

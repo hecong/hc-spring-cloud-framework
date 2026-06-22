@@ -1,23 +1,23 @@
-# RocketMQ 5.x 配置示例
+# RocketMQ 5.x 配置
 rocketmq:
   enabled: true
-  # 接入点地址（阿里云 RocketMQ 为实例 TCP 接入点）
-  endpoints: localhost:8081
-  # 认证信息（阿里云需要配置）
-  # access-key: your-access-key
-  # secret-key: your-secret-key
-  # 消费者配置
-  consumer:
-    # 消费线程数
-    threads: 20
-    # 消费批量大小
-    batch-size: 1
   # 生产者配置
   producer:
-    # 发送超时时间（毫秒）
-    send-timeout: 3000
-    # 重试次数
-    retry-times: 2
+    # 接入点地址
+    endpoints: localhost:8081
+    # 请求超时（秒）
+    request-timeout: 3
+    # 最大重试次数
+    max-attempts: 3
+    # 认证信息（阿里云需要配置）
+    # access-key: your-access-key
+    # secret-key: your-secret-key
+  # Push Consumer（简单消费者）配置 — endpoints 已在框架侧自动注入，此处可省略
+  simple-consumer:
+    endpoints: ${rocketmq.producer.endpoints}
+    consumer-group: test-group
+    # 消费等待时长（秒）
+    await-duration: 30
 
 # 日志配置
 logging:
