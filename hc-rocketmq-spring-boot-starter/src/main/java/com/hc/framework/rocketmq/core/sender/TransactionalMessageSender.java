@@ -120,7 +120,7 @@ public class TransactionalMessageSender extends AbstractMessageSender {
         } catch (Exception e) {
             // 5b. DB 事务失败 → MQ rollback（消息被 Broker 丢弃）
             log.error("[RocketMQ] 本地事务失败，回滚事务消息 msgId:{}", msg.getMsgId(), e);
-            rollbackSafely(pair.getTransaction(), e);
+            rollbackSafely(pair.getTransaction());
             throw e instanceof RuntimeException ? (RuntimeException) e
                     : new RuntimeException("事务消息发送失败", e);
         }
@@ -141,11 +141,11 @@ public class TransactionalMessageSender extends AbstractMessageSender {
     /**
      * 安全 rollback（吞掉 rollback 异常，不覆盖原始业务异常）。
      */
-    private void rollbackSafely(Transaction transaction, Exception cause) {
+    private void rollbackSafely(Transaction transaction) {
         try {
             transaction.rollback();
         } catch (Exception e) {
-            log.error("[RocketMQ] 事务消息 rollback 失败，原始异常将被向上抛出", e);
+            log.error("[RocketMQ] 事务消息 rollback 失败", e);
         }
     }
 }

@@ -116,9 +116,11 @@ public class RocketMqSender {
 
     // ====================== 批量消息 → BatchMessageSender ======================
 
-    /** @see BatchMessageSender#send(String, String, Collection) */
-    public int sendBatch(String topic, String tag, Collection<?> dataList) {
-        return batchSender.send(topic, tag, dataList);
+    /**
+     * @see BatchMessageSender#send(String, String, Collection)
+     */
+    public void sendBatch(String topic, String tag, Collection<?> dataList) {
+        batchSender.send(topic, tag, dataList);
     }
 
     /** @see BatchMessageSender#send(String, Collection) */
