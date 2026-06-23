@@ -14,6 +14,18 @@ import java.util.concurrent.TimeUnit;
 /**
  * 普通消息发送器（同步 / 异步 / 单向）
  *
+ * <p>使用示例：
+ * <pre>{@code
+ * // 同步发送
+ * normalSender.send("OrderTopic", "created", orderDTO);
+ *
+ * // 异步发送（不等待结果）
+ * normalSender.sendAsync("OrderTopic", "created", orderDTO);
+ *
+ * // 单向发送（不关心结果，适合日志等场景）
+ * normalSender.sendOneway("OrderTopic", "log", logData);
+ * }</pre>
+ *
  * @author hc-framework
  * @since 1.0.0
  */

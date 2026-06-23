@@ -19,21 +19,20 @@ import org.springframework.core.ResolvableType;
  * <p>实现 RocketMQListener 接口，子类只需实现 doConsume 方法。
  * 泛型参数 T 通过反射自动解析，无需任何额外配置。</p>
  *
- * <p>使用方式：</p>
+ * <p>使用方式（与发送方共用同一个 DTO）：</p>
  * <pre>{@code
  * @Component
- * @RocketMQMessageListener(
- *     topic = "OrderTopic",
- *     tag = "create",
- *     consumerGroup = "order-group"
- * )
- * public class OrderConsumer extends BaseMqConsumer<OrderDTO> {
+ * @RocketMQMessageListener(topic = "OrderTopic", tag = "created")
+ * public class OrderConsumer extends BaseMqConsumer<OrderMessageDTO> {
  *     @Override
- *     protected void doConsume(OrderDTO order) {
- *         // 业务处理
+ *     protected void doConsume(OrderMessageDTO order) {
+ *         // 直接拿到 OrderMessageDTO，无需手动反序列化
+ *         orderMapper.insert(order);
  *     }
  * }
  * }</pre>
+ * <p>topic 和 consumerGroup 留空时可从 {@code spring.application.name} 自动推导，
+ * endpoints 从 {@code rocketmq.producer.endpoints} 自动填充。</p>
  *
  * @param <T> 业务数据类型
  * @author hc-framework

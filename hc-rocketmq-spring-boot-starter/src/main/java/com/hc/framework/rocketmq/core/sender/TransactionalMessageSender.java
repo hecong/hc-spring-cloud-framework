@@ -31,12 +31,37 @@ import java.util.function.Consumer;
  *     <li>事务成功 → {@link Transaction#commit()}；事务失败 → {@link Transaction#rollback()}</li>
  * </ol>
  *
- * <p>使用示例：</p>
+ * <p><b>使用示例（发送方和消费方共用同一个 DTO）：</b></p>
  * <pre>{@code
- * transactionalSender.sendInTransaction("OrderTopic", "created", orderDTO, order -> {
- *     orderMapper.insert((OrderDTO) order);           // 只有业务逻辑
- *     orderItemMapper.batchInsert(((OrderDTO) order).getItems());
- * });
+ * // === 定义消息 DTO（双方共用）===
+ * public class OrderMessageDTO {
+ *     private String orderNo;
+ *     private BigDecimal amount;
+ *     // getter/setter...
+ * }
+ *
+ * // === 发送方 ===
+ * @Service
+ * public class OrderService {
+ *     private final TransactionalMessageSender transactionalSender;
+ *     private final OrderMapper orderMapper;
+ *
+ *     public void createOrder(OrderMessageDTO dto) {
+ *         transactionalSender.sendInTransaction("OrderTopic", "created", dto, order -> {
+ *             orderMapper.insert(order);  // 无强转，泛型已推导为 OrderMessageDTO
+ *         });
+ *     }
+ * }
+ *
+ * // === 消费方 ===
+ * @Component
+ * @RocketMQMessageListener(topic = "OrderTopic", tag = "created")
+ * public class OrderConsumer extends BaseMqConsumer<OrderMessageDTO> {
+ *     @Override
+ *     protected void doConsume(OrderMessageDTO order) {
+ *         // 直接拿到 OrderMessageDTO，无需手动反序列化
+ *     }
+ * }
  * }</pre>
  *
  * @author hc-framework

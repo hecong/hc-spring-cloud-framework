@@ -9,8 +9,16 @@ import org.apache.rocketmq.client.core.RocketMQClientTemplate;
 /**
  * 顺序消息发送器
  *
- * <p>相同 messageGroup 的消息会进入同一队列，保证先入先出。
+ * <p>相同 messageGroup 的消息进入同一队列，保证先入先出。
  * 典型场景：同一订单的创建→支付→完成。</p>
+ *
+ * <p>使用示例：
+ * <pre>{@code
+ * // 同一订单的所有操作按顺序消费
+ * fifoSender.send("OrderTopic", "created", orderDTO, orderDTO.getOrderNo());
+ * fifoSender.send("OrderTopic", "paid",    payDTO,    payDTO.getOrderNo());
+ * fifoSender.send("OrderTopic", "done",    doneDTO,   doneDTO.getOrderNo());
+ * }</pre>
  *
  * @author hc-framework
  * @since 1.0.0

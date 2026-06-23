@@ -12,6 +12,15 @@ import java.util.concurrent.TimeUnit;
 /**
  * 延迟消息发送器
  *
+ * <p>使用示例：
+ * <pre>{@code
+ * // 30 秒后投递
+ * delaySender.send("OrderTopic", "timeoutCheck", orderDTO, 30, TimeUnit.SECONDS);
+ *
+ * // 5 分钟后投递
+ * delaySender.send("OrderTopic", "remind", orderDTO, 5, TimeUnit.MINUTES);
+ * }</pre>
+ *
  * @author hc-framework
  * @since 1.0.0
  */
