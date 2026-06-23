@@ -1,7 +1,5 @@
 package com.hc.framework.rocketmq.core.sender;
 
-import com.hc.framework.rocketmq.core.BaseMqMessage;
-
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collection;
