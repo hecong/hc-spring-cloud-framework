@@ -23,7 +23,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -50,6 +49,7 @@ import java.util.Map;
 @AutoConfiguration
 @ConditionalOnClass(RocketMQClientTemplate.class)
 @ConditionalOnProperty(prefix = "hc.rocketmq", name = "enabled", havingValue = "true", matchIfMissing = true)
+@MapperScan("com.hc.framework.rocketmq.mapper")
 public class RocketMQAutoConfiguration {
 
     public RocketMQAutoConfiguration() {
@@ -99,11 +99,17 @@ public class RocketMQAutoConfiguration {
     /**
      * 内置事务日志存储（仅 MyBatis-Plus 可用时激活）。
      * 业务方实现 TransactionLogStore 并注册 Bean 后，此默认实现自动跳过。
+     *
+     * <p>注意：不使用 {@code @ConditionalOnBean(MqTransactionLogMapper.class)} 守卫。
+     * 原因：本类上的 {@code @MapperScan} 注册的 {@code MapperScannerConfigurer} 是
+     * {@code BeanDefinitionRegistryPostProcessor}，在 {@code ConfigurationClassPostProcessor}
+     * 之后才执行；而 {@code @ConditionalOnBean} 在配置类解析阶段判定，此时 mapper 尚未注册，
+     * 条件恒不满足，会导致本 Bean 及下游 {@link TransactionalMessageSender} 永不创建。
+     * {@code @MapperScan} 已保证运行时 mapper 存在，{@code @ConditionalOnClass} 守卫类路径即可。</p>
      */
     @Bean
     @ConditionalOnMissingBean(TransactionLogStore.class)
     @ConditionalOnClass({SqlSessionFactory.class})
-    @ConditionalOnBean(MqTransactionLogMapper.class)
     public DefaultTransactionLogStore defaultTransactionLogStore(MqTransactionLogMapper mapper) {
         log.info("[RocketMQ] 配置 DefaultTransactionLogStore（内置事务日志存储已启用）");
         return new DefaultTransactionLogStore(mapper);
@@ -175,11 +181,4 @@ public class RocketMQAutoConfiguration {
         return new UniversalTransactionChecker(transactionLogStore);
     }
 
-    // ====================== MyBatis-Plus Mapper 扫描 ======================
-
-    @Configuration
-    @ConditionalOnClass({SqlSessionFactory.class})
-    @MapperScan(basePackages = {"com.hc.framework.rocketmq.mapper"})
-    public static class RocketMQMapperConfiguration {
-    }
 }
