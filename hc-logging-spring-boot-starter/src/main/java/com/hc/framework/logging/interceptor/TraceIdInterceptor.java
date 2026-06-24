@@ -4,6 +4,7 @@ import com.hc.framework.common.constant.HttpConstants;
 import com.hc.framework.logging.util.TraceIdUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
@@ -17,7 +18,7 @@ public class TraceIdInterceptor implements HandlerInterceptor {
     private static final String TRACE_ID_HEADER = HttpConstants.HEADER_TRACE_ID;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, @NotNull Object handler) {
         // 1. 从请求头获取TraceId，无则生成
         String requestTraceId = request.getHeader(TRACE_ID_HEADER);
         String traceId = TraceIdUtils.initTraceId(requestTraceId);
@@ -28,7 +29,7 @@ public class TraceIdInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+    public void afterCompletion(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler, Exception ex) {
         // 清理MDC，避免线程复用导致污染
         TraceIdUtils.removeTraceId();
     }

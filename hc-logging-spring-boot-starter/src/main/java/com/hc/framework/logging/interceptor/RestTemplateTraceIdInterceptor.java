@@ -2,6 +2,7 @@ package com.hc.framework.logging.interceptor;
 
 import com.hc.framework.common.constant.HttpConstants;
 import com.hc.framework.logging.util.TraceIdUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -59,7 +60,7 @@ public class RestTemplateTraceIdInterceptor implements ClientHttpRequestIntercep
      * @throws IOException IO 异常
      */
     @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+    public @NotNull ClientHttpResponse intercept(@NotNull HttpRequest request, byte @NotNull [] body, @NotNull ClientHttpRequestExecution execution) throws IOException {
         String traceId = TraceIdUtils.getTraceId();
         if (traceId != null && !traceId.isEmpty()) {
             request.getHeaders().add(TRACE_ID_HEADER, traceId);

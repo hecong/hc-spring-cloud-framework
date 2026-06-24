@@ -43,7 +43,6 @@ public class LockTemplate {
      * @param lockKey 锁的key值
      * @param action 业务方法接口实现
      */
-    @Nullable
     public <T> T execute(String lockKey, Callable<T> action) {
         return this.execute(lockKey, DEFAULT_WAIT_TIME, null, DEFAULT_LEASE_TIME, LockType.REDIS_REENTRANT_LOCK, action);
     }
@@ -63,7 +62,6 @@ public class LockTemplate {
      * @param errorMsg 获取锁超时，抛出LockException异常信息
      * @param action 业务方法接口实现
      */
-    @Nullable
     public <T> T execute(String lockKey, String errorMsg, Callable<T> action) {
         return this.execute(lockKey, DEFAULT_WAIT_TIME, errorMsg, DEFAULT_LEASE_TIME, LockType.REDIS_REENTRANT_LOCK, action);
     }
@@ -96,7 +94,6 @@ public class LockTemplate {
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
      */
-    @Nullable
     public <T> T execute(String lockKey, String errorMsg, LockType lockType, Callable<T> action) {
         return this.execute(lockKey, DEFAULT_WAIT_TIME, errorMsg, DEFAULT_LEASE_TIME, lockType, action);
     }
@@ -135,7 +132,6 @@ public class LockTemplate {
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
      */
-    @Nullable
     private <T> T execute(String lockKey, int waitTime, String errorMsg, int leaseTime, LockType lockType, Callable<T> action) {
         return this.handleLock(lockKey, waitTime, errorMsg, leaseTime, lockType, action);
     }
@@ -162,7 +158,6 @@ public class LockTemplate {
      * @param lockType 锁类型 {@link LockType}
      * @param action 业务方法接口实现
      */
-    @Nullable
     private <T> T handleLock(String lockKey, int waitTime, String errorMsg, int leaseTime, LockType lockType, Object action) {
         // 加锁
         RLock lock = this.getLock(lockKey, lockType);
@@ -212,12 +207,10 @@ public class LockTemplate {
         this.handleLock(lockKeys, DEFAULT_WAIT_TIME, null, DEFAULT_LEASE_TIME, LockType.REDIS_REENTRANT_LOCK, action);
     }
 
-    @Nullable
     public <T> T execute(Collection<String> lockKeys, Callable<T> action) {
         return this.handleLock(lockKeys, DEFAULT_WAIT_TIME, null, DEFAULT_LEASE_TIME, LockType.REDIS_REENTRANT_LOCK, action);
     }
 
-    @Nullable
     private <T> T handleLock(Collection<String> lockKeys, int waitTime, String errorMsg, int leaseTime, LockType lockType, Object action) {
         // 加锁
         List<RLock> lockList = lockKeys.stream().map(key -> this.getLock(key, lockType)).toList();
