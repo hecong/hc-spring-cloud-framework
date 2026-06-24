@@ -13,6 +13,10 @@ import com.hc.framework.rocketmq.service.DefaultTransactionLogStore;
 import com.hc.framework.rocketmq.util.IdempotentUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.rocketmq.client.apis.ClientException;
+import org.apache.rocketmq.client.apis.ClientServiceProvider;
+import org.apache.rocketmq.client.apis.producer.Producer;
+import org.apache.rocketmq.client.autoconfigure.RocketMQProperties;
 import org.apache.rocketmq.client.core.RocketMQClientTemplate;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -50,7 +54,7 @@ import java.util.Map;
 @ConditionalOnClass(RocketMQClientTemplate.class)
 @ConditionalOnProperty(prefix = "hc.rocketmq", name = "enabled", havingValue = "true", matchIfMissing = true)
 @MapperScan("com.hc.framework.rocketmq.mapper")
-public class RocketMQAutoConfiguration {
+public class RocketMQAutoConfiguration extends RocketMQBaseConfig {
 
     public RocketMQAutoConfiguration() {
         log.info("[RocketMQ] 自动配置已加载");
@@ -116,6 +120,43 @@ public class RocketMQAutoConfiguration {
     }
 
     /**
+     * 通用事务消息回查 Checker。
+     *
+     * <p>基于 {@link TransactionLogStore} 判断本地事务是否已提交。</p>
+     *
+     * <p><b>注意：</b>此 Bean 必须在 {@code rocketMQTransactionTemplate} 之前定义，
+     * 否则 {@code @ConditionalOnBean(UniversalTransactionChecker.class)} 无法感知。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean(UniversalTransactionChecker.class)
+    @ConditionalOnBean(TransactionLogStore.class)
+    public UniversalTransactionChecker universalTransactionChecker(TransactionLogStore transactionLogStore) {
+        log.info("[RocketMQ] 配置 UniversalTransactionChecker（通用事务回查已启用）");
+        return new UniversalTransactionChecker(transactionLogStore);
+    }
+
+    /**
+     * 事务消息专用 Template（绑定 {@link UniversalTransactionChecker} 的 Producer）。
+     *
+     * <p>与官方 Starter 创建的默认 {@code rocketMQClientTemplate}（普通 Producer）不同，
+     * 此 Template 底层的 Producer 已设置事务回查器，才能调用
+     * {@code sendTransactionMessage()} 发送事务半消息。</p>
+     */
+    @Bean
+    @ConditionalOnBean(UniversalTransactionChecker.class)
+    public RocketMQClientTemplate rocketMQTransactionTemplate(
+        ClientServiceProvider clientServiceProvider,
+        UniversalTransactionChecker checker,
+        RocketMQProperties rocketMQProperties) throws ClientException {
+        log.info("[RocketMQ] 配置 rocketMQTransactionTemplate（事务 Producer）");
+        Producer producer = clientServiceProvider.newProducerBuilder()
+            .setClientConfiguration(buildClientConfig(rocketMQProperties))
+            .setTransactionChecker(checker)
+            .build();
+        return buildTransactionTemplate(producer);
+    }
+
+    /**
      * 事务消息发送器（框架管理 DB 事务 + MQ commit/rollback）。
      * 需要 TransactionTemplate 和 TransactionLogStore 同时可用。
      */
@@ -124,7 +165,7 @@ public class RocketMQAutoConfiguration {
     @ConditionalOnClass(TransactionTemplate.class)
     @ConditionalOnBean(TransactionLogStore.class)
     public TransactionalMessageSender transactionalMessageSender(
-        @Qualifier("rocketMQClientTemplate") RocketMQClientTemplate template,
+        @Qualifier("rocketMQTransactionTemplate") RocketMQClientTemplate template,
         TransactionLogStore transactionLogStore,
         TransactionTemplate transactionTemplate) {
         log.info("[RocketMQ] 配置 TransactionalMessageSender（事务自动管理已启用）");
@@ -169,16 +210,6 @@ public class RocketMQAutoConfiguration {
         enhancer.setEnvironment(environment);
         log.info("[RocketMQ] 配置 DefaultEndpointsAnnotationEnhancer（endpoints/topic/consumerGroup 自动推导已启用）");
         return enhancer;
-    }
-
-    // ====================== 事务回查 ======================
-
-    @Bean
-    @ConditionalOnMissingBean(UniversalTransactionChecker.class)
-    @ConditionalOnBean(TransactionLogStore.class)
-    public UniversalTransactionChecker universalTransactionChecker(TransactionLogStore transactionLogStore) {
-        log.info("[RocketMQ] 配置 UniversalTransactionChecker（通用事务回查已启用）");
-        return new UniversalTransactionChecker(transactionLogStore);
     }
 
 }

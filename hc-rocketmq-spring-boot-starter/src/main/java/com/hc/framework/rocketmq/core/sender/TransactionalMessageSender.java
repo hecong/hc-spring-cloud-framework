@@ -1,5 +1,6 @@
 package com.hc.framework.rocketmq.core.sender;
 
+import com.hc.framework.common.util.JsonUtils;
 import com.hc.framework.rocketmq.core.BaseMqMessage;
 import com.hc.framework.rocketmq.core.transaction.TransactionLogStore;
 import com.hc.framework.rocketmq.core.transaction.TransactionResult;
@@ -114,14 +115,15 @@ public class TransactionalMessageSender extends AbstractMessageSender {
         msg.setTag(tag);
         String destination = buildDestination(topic, tag);
 
-        // 2. 发送半消息至 Broker
+        // 2. 发送半消息至 Broker（序列化为 JSON 字符串，消费端通过 MessageUtils.parseMessage 反序列化）
         if (loggerEnabled) {
             log.info("[RocketMQ] 发送事务半消息 topic:{} tag:{} msgId:{}", topic, tag, msg.getMsgId());
         }
         Pair<SendReceipt, Transaction> pair;
         try {
+            String payload = JsonUtils.toJson(msg);
             pair = rocketMQClientTemplate.sendTransactionMessage(
-                    destination, MessageBuilder.withPayload(msg).build());
+                    destination, MessageBuilder.withPayload(payload).build());
         } catch (Exception e) {
             log.error("[RocketMQ] 事务半消息发送失败 topic:{} tag:{} msgId:{}", topic, tag, msg.getMsgId(), e);
             throw new RuntimeException("事务消息发送失败", e);
