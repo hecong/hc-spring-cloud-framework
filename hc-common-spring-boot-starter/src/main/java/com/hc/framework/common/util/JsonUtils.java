@@ -131,7 +131,7 @@ public class JsonUtils {
         try {
             JsonNode node = MAPPER.readTree(json);
             JsonNode field = node.get(fieldName);
-            return field != null ? field.asText() : null;
+            return field != null ? field.asString() : null;
         } catch (JacksonException e) {
             throw new RuntimeException("JSON 节点读取失败: " + e.getMessage(), e);
         }
