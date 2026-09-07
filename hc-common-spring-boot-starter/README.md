@@ -9,14 +9,14 @@
 ## 功能特性
 
 - **常量类**：`CacheConstants`、`DateConstants`、`HttpConstants`、`SystemConstants`
-- **工具类**：`AssertUtils`、`DateUtils`、`IpUtils`、`JsonUtils`、`PageUtils`、`StringUtils`
+- **工具类**：`AssertUtils`、`DateUtils`、`IpUtils`、`JsonUtils`、`PageUtils`（自 1.1.0 弃用，替代 API 见 hc-mybatis-plus README「分页 API 收敛」）、`StringUtils`
 - **通用模型**：`Result<T>` 统一响应体、`RepeatSubmitException` 重复提交异常
 
 ## 快速开始
 
 ```xml
 <dependency>
-    <groupId>com.hnhegui.framework</groupId>
+    <groupId>com.hc.framework</groupId>
     <artifactId>hc-common-spring-boot-starter</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>

@@ -122,9 +122,45 @@ public class RateLimiterAspect {
     }
 
     /**
-     * 初始化Sentinel限流规则
+     * 初始化 Sentinel 限流规则（并发安全注册，保证同一资源只注册一条）
+     *
+     * <p>自 1.1.0 起：CAS 集合短路 + 同步块 double-check。已注册资源（含重复访问）走无锁
+     * {@code contains} 短路直接返回；首次并发访问只有一个线程进入同步块注册规则并加载，
+     * 消除"检查-加载"窗口内的竞态重复注册。</p>
+     *
+     * @param resourceName 资源名
+     * @param qps          QPS 上限
+     * @param mode         限流模式
      */
-    private void initFlowRule(String resourceName, double qps, RateLimiter.Mode mode) {
+    void initFlowRule(String resourceName, double qps, RateLimiter.Mode mode) {
+        // 已注册：幂等短路（无锁）
+        if (registeredResources.contains(resourceName)) {
+            return;
+        }
+        synchronized (this) {
+            // 并发首访 double-check：等待锁的线程不再重复注册
+            if (registeredResources.contains(resourceName)) {
+                return;
+            }
+            boolean ruleExists = FlowRuleManager.getRules().stream()
+                    .anyMatch(r -> resourceName.equals(r.getResource()));
+            if (ruleExists) {
+                // 规则已存在（外部来源注册）且不在本切面管理集合：不接管、不重复注册
+                return;
+            }
+            FlowRule rule = buildFlowRule(resourceName, qps, mode);
+            // 规则注册（追加方式，避免覆盖已有规则）
+            List<FlowRule> existingRules = new ArrayList<>(FlowRuleManager.getRules());
+            existingRules.add(rule);
+            FlowRuleManager.loadRules(existingRules);
+            registeredResources.add(resourceName);
+        }
+    }
+
+    /**
+     * 构建限流规则
+     */
+    private FlowRule buildFlowRule(String resourceName, double qps, RateLimiter.Mode mode) {
         FlowRule rule = new FlowRule();
         rule.setResource(resourceName);
         rule.setGrade(RuleConstant.FLOW_GRADE_QPS);
@@ -145,14 +181,7 @@ public class RateLimiterAspect {
                 rule.setControlBehavior(RuleConstant.CONTROL_BEHAVIOR_DEFAULT);
                 break;
         }
-
-        // 规则注册（追加方式，避免覆盖已有规则）
-        if (FlowRuleManager.getRules().stream().noneMatch(r -> r.getResource().equals(resourceName))) {
-            List<FlowRule> existingRules = new ArrayList<>(FlowRuleManager.getRules());
-            existingRules.add(rule);
-            FlowRuleManager.loadRules(existingRules);
-            registeredResources.add(resourceName);
-        }
+        return rule;
     }
 
 

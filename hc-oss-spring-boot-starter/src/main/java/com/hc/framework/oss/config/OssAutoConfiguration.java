@@ -4,6 +4,7 @@ import com.hc.framework.oss.service.OssService;
 import com.hc.framework.oss.service.impl.AliyunOssServiceImpl;
 import com.hc.framework.oss.service.impl.MinioOssServiceImpl;
 import com.hc.framework.oss.service.impl.TencentCosServiceImpl;
+import com.hc.framework.oss.support.OssUploadValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -30,17 +31,29 @@ public class OssAutoConfiguration {
     }
 
     /**
+     * 上传统一校验器（默认内置白名单，支持 upload-validation 配置组覆盖）
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public OssUploadValidator ossUploadValidator(OssProperties ossProperties) {
+        OssProperties.UploadValidationConfig config = ossProperties.getUploadValidation();
+        log.info("初始化OSS上传校验: enabled={}, allowedExtensions={}, maxFileSize={}",
+                config.isEnabled(), config.getAllowedExtensions(), config.getMaxFileSize());
+        return new OssUploadValidator(config.isEnabled(), config.getAllowedExtensions(), config.getMaxFileSize());
+    }
+
+    /**
      * 根据 defaultType 创建唯一的 OSS 服务实现
      */
     @Bean
     @ConditionalOnMissingBean
-    public OssService ossService(OssProperties ossProperties) {
+    public OssService ossService(OssProperties ossProperties, OssUploadValidator ossUploadValidator) {
         String type = ossProperties.getDefaultType();
         log.info("创建OSS服务实现: type={}", type);
         return switch (type) {
-            case "aliyun" -> new AliyunOssServiceImpl(ossProperties.getAliyun());
-            case "minio" -> new MinioOssServiceImpl(ossProperties.getMinio());
-            case "tencent-cos" -> new TencentCosServiceImpl(ossProperties.getTencentCos());
+            case "aliyun" -> new AliyunOssServiceImpl(ossProperties.getAliyun(), ossUploadValidator);
+            case "minio" -> new MinioOssServiceImpl(ossProperties.getMinio(), ossUploadValidator);
+            case "tencent-cos" -> new TencentCosServiceImpl(ossProperties.getTencentCos(), ossUploadValidator);
             default -> throw new IllegalStateException(
                     "不支持的OSS存储类型: " + type + "，可选值: aliyun, minio, tencent-cos");
         };

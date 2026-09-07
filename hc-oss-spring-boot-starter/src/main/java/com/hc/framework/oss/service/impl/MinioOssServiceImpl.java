@@ -2,6 +2,8 @@ package com.hc.framework.oss.service.impl;
 
 import com.hc.framework.oss.config.OssProperties;
 import com.hc.framework.oss.service.OssService;
+import com.hc.framework.oss.support.OssUploadValidator;
+import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
@@ -11,9 +13,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
-import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,14 +25,31 @@ import java.util.concurrent.TimeUnit;
 public class MinioOssServiceImpl implements OssService {
 
     private final OssProperties.MinioConfig config;
+    private final OssUploadValidator validator;
     private MinioClient minioClient;
 
     public MinioOssServiceImpl(OssProperties.MinioConfig config) {
+        this(config, new OssUploadValidator());
+    }
+
+    public MinioOssServiceImpl(OssProperties.MinioConfig config, OssUploadValidator validator) {
         this.config = config;
+        this.validator = validator;
+    }
+
+    /**
+     * 测试注入 mock 客户端（不经容器生命周期）
+     */
+    MinioOssServiceImpl(OssProperties.MinioConfig config, OssUploadValidator validator, MinioClient minioClient) {
+        this(config, validator);
+        this.minioClient = minioClient;
     }
 
     @PostConstruct
     public void init() {
+        if (minioClient != null) {
+            return;
+        }
         this.minioClient = MinioClient.builder()
                 .endpoint(config.getEndpoint())
                 .credentials(config.getAccessKey(), config.getSecretKey())
@@ -63,21 +82,36 @@ public class MinioOssServiceImpl implements OssService {
     @Override
     public String upload(String fileName, InputStream inputStream, String contentType, long contentLength) {
         try {
-            long objectSize = contentLength > 0 ? contentLength : -1;
-            long partSize = contentLength > 0 ? -1 : 5 * 1024 * 1024;
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(config.getBucketName())
-                            .object(fileName)
-                            .stream(inputStream, objectSize, partSize)
-                            .contentType(contentType)
-                            .build()
-            );
-            return getUrl(fileName);
-        } catch (Exception e) {
-            log.error("MinIO上传失败: {}", fileName, e);
-            throw new RuntimeException("文件上传失败", e);
+            // 校验（扩展名/魔数/声明大小），失败抛 IllegalArgumentException；未知大小时包装限制读取流
+            InputStream uploadStream = validator.prepare(fileName, inputStream, contentLength);
+            try {
+                long objectSize = contentLength > 0 ? contentLength : -1;
+                long partSize = contentLength > 0 ? -1 : 5 * 1024 * 1024;
+                minioClient.putObject(
+                        PutObjectArgs.builder()
+                                .bucket(config.getBucketName())
+                                .object(fileName)
+                                .stream(uploadStream, objectSize, partSize)
+                                .contentType(contentType)
+                                .build()
+                );
+                return getUrl(fileName);
+            } catch (Exception e) {
+                throw translateSdkException(fileName, e);
+            }
+        } finally {
+            // 校验失败/成功/上传异常路径均关闭原始流
+            OssUploadValidator.closeQuietly(inputStream);
         }
+    }
+
+    private RuntimeException translateSdkException(String fileName, Exception e) {
+        if (OssUploadValidator.containsCause(e, OssUploadValidator.UploadSizeLimitExceededException.class)) {
+            return new IllegalArgumentException(
+                    "文件大小超出限制: 实际读取超过 " + validator.getMaxFileSize() + " 字节", e);
+        }
+        log.error("MinIO上传失败: {}", fileName, e);
+        return new RuntimeException("文件上传失败", e);
     }
 
     @Override
@@ -114,7 +148,7 @@ public class MinioOssServiceImpl implements OssService {
     public String getUrl(String fileName, Integer expireTime) {
         try {
             return minioClient.getPresignedObjectUrl(
-                    io.minio.GetPresignedObjectUrlArgs.builder()
+                    GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(config.getBucketName())
                             .object(fileName)

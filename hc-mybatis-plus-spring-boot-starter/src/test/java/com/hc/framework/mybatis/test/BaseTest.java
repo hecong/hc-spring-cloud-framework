@@ -20,8 +20,10 @@ public abstract class BaseTest {
 
     /**
      * MySQL 容器
+     * 生命周期由 Testcontainers（@Testcontainers + @Container）托管，无需手动关闭
      */
     @Container
+    @SuppressWarnings("resource")
     public static MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("test")
             .withUsername("root")

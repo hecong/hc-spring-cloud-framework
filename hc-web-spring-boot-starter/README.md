@@ -6,6 +6,22 @@
 
 本模块封装了 Spring Boot Web 开发的常用功能，提供了统一响应格式、全局异常处理、XSS 防护、响应自动包装等特性，简化 Web 层开发，提高开发效率。
 
+---
+
+## 升级指引（1.0.x → 1.1.0）
+
+1. **客户端 IP 解析默认安全**：`IpUtils.getClientIp()` 不再缺省采信 `X-Forwarded-For`/`X-Real-IP`
+   （安全默认取 TCP 对端地址）。处于可信代理/负载均衡后方的服务需配置
+   `hc.web.trusted-proxies`（支持 CIDR）恢复准确，详见「安全加固」章节。
+2. **`BusinessException` 单参默认错误码改为 400**（原 500）：若业务依赖单参构造返回 500，
+   请改为显式两参构造 `new BusinessException(500, msg)`。检索受影响的调用点：
+
+   ```bash
+   grep -rn "new BusinessException(" --include=*.java .
+   ```
+
+---
+
 ## 设计思路
 
 ### 核心设计理念
@@ -26,7 +42,7 @@ hc-web-spring-boot-starter
 │   └── WebProperties                # 配置属性类
 ├── exception/                       # 异常处理
 │   ├── BusinessException            # 业务异常
-│   └── GlobalExceptionHandler       # 全局异常处理器（8 种异常类型）
+│   └── GlobalExceptionHandler       # 全局异常处理器（12 种异常类型）
 ├── model/                           # 模型
 │   └── Result                       # 统一响应结果（继承 common.Result）
 ├── serializer/                      # 序列化
@@ -88,6 +104,10 @@ GlobalExceptionHandler 捕获
 │ ConstraintViolationException   → 400 Bad Request      │
 │ MissingServletRequestParameter → 400 Bad Request      │
 │ MethodArgumentTypeMismatch     → 400 Bad Request      │
+│ HttpRequestMethodNotSupported  → 405 Method Not Allowed│
+│ HttpMediaTypeNotSupported      → 415 Unsupported Media │
+│ MaxUploadSizeExceeded          → 413 Payload Too Large │
+│ MissingPathVariable            → 400 Bad Request      │
 │ IllegalArgumentException       → 400 Bad Request      │
 │ IllegalStateException          → 500 Internal Error   │
 │ Exception（兜底）               → 500 Internal Error   │
@@ -147,7 +167,8 @@ Spring 托管 ObjectMapper（唯一的 ObjectMapper 实例）
 
 ### 3. 全局异常处理
 
-- **8 种异常精确处理** + 1 个兜底处理，全部返回统一 `Result` 格式
+- **12 种异常精确处理** + 1 个兜底处理，全部返回统一 `Result` 格式
+- **HTTP 协议异常**（自 1.1.0）：请求方法不支持（405）、内容类型不支持（415）、上传大小超限（413）、缺少路径变量（400）
 - **参数校验异常**：`@Valid`/`@Validated` 校验失败自动提取 `FieldError` 拼接消息
 - **用户可扩展**：注册自己的 `GlobalExceptionHandler` Bean 即可替换（`@ConditionalOnMissingBean`）
 
@@ -183,6 +204,8 @@ Spring 托管 ObjectMapper（唯一的 ObjectMapper 实例）
   - 缓存 `body` 支持重复读取（解决 `HttpServletRequest` 流不可重复读的痛点）
   - 支持动态添加/删除 Header（`addHeader`/`removeHeader`）
   - Header 名大小写不敏感（统一小写存储）
+  - 缓存上限保护（自 1.1.0）：默认 2MB，超过上限不缓存直接消费原始流，`getBodyBytes()` 返回 `null` 需判空降级
+  - 支持自定义上限构造：`new CustomizeRequestWrapper(request, maxCachedBody)`
 
 ---
 
@@ -192,7 +215,7 @@ Spring 托管 ObjectMapper（唯一的 ObjectMapper 实例）
 
 ```xml
 <dependency>
-    <groupId>com.hnhegui.framework</groupId>
+    <groupId>com.hc.framework</groupId>
     <artifactId>hc-web-spring-boot-starter</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>
@@ -294,7 +317,7 @@ public class UserServiceImpl implements UserService {
     public User login(String username, String password) {
         User user = userMapper.selectByUsername(username);
         if (user == null) {
-            throw new BusinessException("用户名或密码错误");          // code=500
+            throw new BusinessException("用户名或密码错误");          // code=400（默认业务错误码）
         }
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new BusinessException(401, "用户名或密码错误");     // 自定义 code
@@ -521,6 +544,10 @@ hc:
     xss-exclude-urls:                # XSS 排除路径，Ant 风格（默认空）
       - /api/editor/**
       - /api/rich-text/**
+    max-cached-body-size: 2097152     # 请求体缓存上限（字节，默认 2MB）
+    trusted-proxies:                  # 可信代理 IP / IPv4 CIDR（默认空 = 不采信代理头）
+      - 10.0.0.0/8
+      - 192.168.1.100
 ```
 
 ### 配置项说明
@@ -534,6 +561,59 @@ hc:
 | `hc.web.data-field` | `String` | `data` | 响应数据 JSON 字段名 |
 | `hc.web.xss-enabled` | `Boolean` | `true` | XSS 防护开关 |
 | `hc.web.xss-exclude-urls` | `List<String>` | 空 | 不进行 XSS 过滤的 URL 路径（Ant 风格） |
+| `hc.web.max-cached-body-size` | `Long` | `2097152` | 请求体缓存上限（字节），超限不缓存降级读原始流（自 1.1.0） |
+| `hc.web.trusted-proxies` | `List<String>` | 空 | 可信代理 IP / IPv4 CIDR 列表，默认不采信代理头（自 1.1.0） |
+
+---
+
+## 安全加固（自 1.1.0）
+
+### 1. 客户端 IP 解析默认安全（不再采信代理头）
+
+`IpUtils.getClientIp()` 解析策略升级为**可信代理模型**，默认不信任任何代理头：
+
+- 默认直接取 TCP 对端 `remoteAddr`，伪造的 `X-Forwarded-For`/`X-Real-IP` 不再被采信；
+- `::1` 归一为 `127.0.0.1`；仅当对端为本机回环（本机 Nginx 单跳/本地调试）时才依次尝试
+  `X-Real-IP`、`X-Forwarded-For` 首 IP；
+- 配置可信代理后：对来自可信代理的请求，从 `X-Forwarded-For` **右向左**跳过可信代理，
+  返回首个不可信 IP；链中全可信时回退 `X-Real-IP`，再回退 `remoteAddr`；
+  不可信直连（对端非可信代理）忽略全部转发头。
+
+```yaml
+hc:
+  web:
+    trusted-proxies:              # 精确 IP 或 IPv4 CIDR，默认空
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.1.100
+```
+
+> **升级注意（Breaking）**：1.0.x 会优先采信 `X-Forwarded-For`（含被客户端伪造的场景）。
+> 本次改为安全默认后，处于可信代理/负载均衡后方的服务，日志与限流将取到代理地址，
+> 需按实际部署配置 `hc.web.trusted-proxies` 恢复准确。
+> 业务可通过自定义 `IpTrustedProxiesInitializer` Bean（`@ConditionalOnMissingBean`）覆盖默认注入逻辑。
+>
+> **限制说明**：IPv6 仅精确匹配（不做 CIDR 位运算）；XFF 畸形值仅做 basic trim + 合法性过滤，
+> 不做深度清洗；404（未匹配路由）不在本版本异常映射范围。
+
+### 2. 请求体缓存上限（默认 2MB）
+
+`CustomizeRequestWrapper` 增加缓存体上限保护，防止大请求体导致 OOM：
+
+- `Content-Length` 明确且超过上限：不读流、不缓存，直接消费原始流；
+- `Content-Length` 缺失/被欺骗：读入后**二次防护**，实际长度超上限则丢弃缓存；
+- 未缓存时 `getBodyBytes()` 返回 `null`，读取方需判空（可降级读原始流）；
+- `new CustomizeRequestWrapper(request)` 签名保留（默认 2MB），新增
+  `new CustomizeRequestWrapper(request, maxCachedBody)` 按场景收紧/放宽。
+
+### 3. 新增异常映射
+
+| 触发异常 | HTTP 状态码 | Result.code | 消息 |
+|----------|------------|-------------|------|
+| `HttpRequestMethodNotSupportedException` | 405 | 405 | `请求方法不支持` |
+| `HttpMediaTypeNotSupportedException` | 415 | 415 | `不支持的请求内容类型` |
+| `MaxUploadSizeExceededException` | 413 | 413 | `上传文件大小超过限制`（不泄漏阈值） |
+| `MissingPathVariableException` | 400 | 400 | `缺少路径变量: {变量名}` |
 
 ---
 
@@ -676,6 +756,7 @@ public class FileController {
 
 ```java
 // 场景：需要在 Filter 中读取请求体，但 Controller 也需要读取
+// 自 1.1.0 起默认缓存上限 2MB：超限不缓存（getBodyBytes()==null），可按需降级读原始流
 
 @WebFilter("/*")
 public class SignFilter implements Filter {
@@ -683,11 +764,20 @@ public class SignFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         CustomizeRequestWrapper wrapper = new CustomizeRequestWrapper((HttpServletRequest) request);
-        String body = new String(wrapper.getBodyBytes(), StandardCharsets.UTF_8);
+        byte[] cached = wrapper.getBodyBytes();
+        String body = cached != null
+                ? new String(cached, StandardCharsets.UTF_8)
+                : new String(((HttpServletRequest) request).getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         // 验签逻辑...
         chain.doFilter(wrapper, response);
     }
 }
+```
+
+若需按场景收紧/放宽缓存上限，使用带上限构造：
+
+```java
+CustomizeRequestWrapper wrapper = new CustomizeRequestWrapper((HttpServletRequest) request, 8 * 1024 * 1024);
 ```
 
 ---
@@ -782,7 +872,8 @@ byte[] bytes = ServletUtils.getBodyBytes(request);  // byte[]
 ### 5. 性能
 
 - 避免在循环中调用 `ServletUtils.getRequest()`
-- `CustomizeRequestWrapper` 会缓存 body 字节数组，大文件上传场景注意内存使用
+- `CustomizeRequestWrapper` 有缓存上限保护（默认 2MB，`hc.web.max-cached-body-size` 可调），
+  超过上限不缓存直接消费原始流，大请求不会因缓存 body 造成 OOM
 
 ---
 
@@ -797,6 +888,10 @@ byte[] bytes = ServletUtils.getBodyBytes(request);  // byte[]
 | `ConstraintViolationException` | 400 | WARN | `@RequestParam` 校验失败 |
 | `MissingServletRequestParameterException` | 400 | WARN | 缺少必要参数 |
 | `MethodArgumentTypeMismatchException` | 400 | WARN | 参数类型不匹配 |
+| `HttpRequestMethodNotSupportedException` | 405 | WARN | 请求方法不支持 |
+| `HttpMediaTypeNotSupportedException` | 415 | WARN | 不支持的请求内容类型 |
+| `MaxUploadSizeExceededException` | 413 | WARN | 上传大小超限 |
+| `MissingPathVariableException` | 400 | WARN | 缺少路径变量 |
 | `IllegalArgumentException` | 400 | WARN | 非法参数（业务校验结果） |
 | `IllegalStateException` | 500 | ERROR | 服务端内部状态错误 |
 | `Exception`（兜底） | 500 | ERROR | 未预期的系统异常，返回"系统繁忙" |
@@ -805,4 +900,7 @@ byte[] bytes = ServletUtils.getBodyBytes(request);  // byte[]
 
 ## 版本历史
 
+- **1.1.0**：安全加固——客户端 IP 解析升级可信代理模型（默认不采信代理头，支持 CIDR）、
+  请求体缓存上限（默认 2MB，超限降级）、新增 405/415/413/缺少路径变量异常映射、
+  `BusinessException` 单参构造默认错误码改为 400（原 500）
 - **1.0.0**：初始版本，提供统一响应格式、全局异常处理、XSS 双重防护、响应自动包装、动态字段名、Servlet 工具类

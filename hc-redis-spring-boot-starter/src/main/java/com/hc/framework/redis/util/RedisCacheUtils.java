@@ -2,8 +2,13 @@ package com.hc.framework.redis.util;
 
 import lombok.RequiredArgsConstructor;
 import org.dromara.hutool.core.collection.CollUtil;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.connection.RedisConnection;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,14 +67,49 @@ public class RedisCacheUtils {
     }
 
     /**
-     * 根据前缀批量删除
+     * 根据前缀批量删除（SCAN 游标 + 分批 DELETE，避免 KEYS 阻塞 Redis 单线程）
+     *
+     * <p>单次扫描数量有界（{@link #SCAN_COUNT_LIMIT}），单批删除数量有界（{@link #DELETE_BATCH_SIZE}）。
+     * 语义为尽力而为的最终一致：遍历期间新增/删除的 key 不做强一致承诺，删除幂等可重入。
+     * 前缀匹配量极大时耗时随 key 数量线性增长（换取非阻塞收益），请谨慎评估调用频率。</p>
      */
     public Long deleteByPrefix(String prefix) {
-        Set<String> keys = redisTemplate.keys(prefix + "*");
-        if (CollUtil.isEmpty(keys)) {
-            return 0L;
-        }
-        return redisTemplate.delete(keys);
+        ScanOptions scanOptions = ScanOptions.scanOptions()
+            .match(prefix + "*")
+            .count(SCAN_COUNT_LIMIT)
+            .build();
+        return redisTemplate.execute((RedisCallback<Long>) connection -> {
+            long deleted = 0L;
+            List<byte[]> batch = new ArrayList<>(DELETE_BATCH_SIZE);
+            try (Cursor<byte[]> cursor = connection.keyCommands().scan(scanOptions)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= DELETE_BATCH_SIZE) {
+                        deleted += deleteBatch(connection, batch);
+                        batch.clear();
+                    }
+                }
+            }
+            if (!batch.isEmpty()) {
+                deleted += deleteBatch(connection, batch);
+            }
+            return deleted;
+        });
+    }
+
+    /**
+     * 单次 DELETE 的批量上限
+     */
+    private static final int DELETE_BATCH_SIZE = 500;
+
+    /**
+     * 单次 SCAN 游标数量上限
+     */
+    private static final int SCAN_COUNT_LIMIT = 1000;
+
+    private long deleteBatch(RedisConnection connection, List<byte[]> keys) {
+        Long deleted = connection.keyCommands().del(keys.toArray(new byte[0][]));
+        return deleted == null ? 0L : deleted;
     }
 
     /**

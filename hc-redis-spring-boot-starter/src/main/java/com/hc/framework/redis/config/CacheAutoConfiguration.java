@@ -1,6 +1,6 @@
 package com.hc.framework.redis.config;
 
-import com.hc.framework.redis.core.RedisSerializerConstants;
+import com.hc.framework.redis.core.CustomGenericJackson2JsonRedisSerializer;
 import com.hc.framework.redis.core.TimeoutRedisCacheManager;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.cache.autoconfigure.CacheProperties;
@@ -26,12 +26,13 @@ public class CacheAutoConfiguration {
 
     @Bean
     @Primary
-    public RedisCacheConfiguration redisCacheConfiguration(CacheProperties cacheProperties) {
+    public RedisCacheConfiguration redisCacheConfiguration(CacheProperties cacheProperties,
+                                                           CustomGenericJackson2JsonRedisSerializer redisValueSerializer) {
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig();
 
-        // 使用自定义 JSON 序列化
+        // 使用自定义 JSON 序列化（与 RedisTemplate 共用同一白名单实例）
         config = config.serializeValuesWith(
-            RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializerConstants.REDIS_SERIALIZER));
+            RedisSerializationContext.SerializationPair.fromSerializer(redisValueSerializer));
 
         // 加载配置文件
         CacheProperties.Redis redisProperties = cacheProperties.getRedis();

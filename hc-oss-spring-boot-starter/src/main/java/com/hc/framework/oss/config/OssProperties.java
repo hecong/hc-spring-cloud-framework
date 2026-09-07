@@ -3,6 +3,8 @@ package com.hc.framework.oss.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.List;
+
 /**
  * OSS 配置属性
  * <p>
@@ -37,6 +39,33 @@ public class OssProperties {
      * 腾讯云 COS 配置
      */
     private TencentCosConfig tencentCos = new TencentCosConfig();
+
+    /**
+     * 上传校验配置（默认开启，BREAKING：升级后框架会按白名单校验并按需关闭流）
+     */
+    private UploadValidationConfig uploadValidation = new UploadValidationConfig();
+
+    /**
+     * 上传校验配置
+     */
+    @Data
+    public static class UploadValidationConfig {
+
+        /**
+         * 是否启用上传校验（扩展名/魔数/大小），默认 true；false 仅关闭校验，流仍由框架关闭
+         */
+        private boolean enabled = true;
+
+        /**
+         * 允许的扩展名白名单（自动转小写、容忍前导点号）；为空时使用内置默认表
+         */
+        private List<String> allowedExtensions;
+
+        /**
+         * 单文件大小上限（字节），默认 100MB（104857600）
+         */
+        private long maxFileSize = 100L * 1024 * 1024;
+    }
 
     /**
      * 阿里云 OSS 配置

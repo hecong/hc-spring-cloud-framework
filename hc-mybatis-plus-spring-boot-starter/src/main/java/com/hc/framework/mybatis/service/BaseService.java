@@ -20,7 +20,7 @@ public interface BaseService<T> extends IService<T> {
      * 分页查询（返回统一分页结果）
      *
      * @param pageParam 分页参数
-     * @return PageResult 统一分页响应
+     * @return PageData 统一分页响应
      */
     PageData<T> pageResult(PageParam pageParam);
 
@@ -29,7 +29,7 @@ public interface BaseService<T> extends IService<T> {
      *
      * @param pageParam    分页参数
      * @param queryWrapper 查询条件
-     * @return PageResult 统一分页响应
+     * @return PageData 统一分页响应
      */
     PageData<T> pageResult(PageParam pageParam, com.baomidou.mybatisplus.core.conditions.Wrapper<T> queryWrapper);
 

@@ -42,6 +42,11 @@ public class LoggingProperties {
     private RateLimitConfig rateLimit = new RateLimitConfig();
 
     /**
+     * API 日志采样与序列化体积配置
+     */
+    private ApiLogConfig apiLog = new ApiLogConfig();
+
+    /**
      * 限流嵌套配置
      */
     @Data
@@ -70,5 +75,21 @@ public class LoggingProperties {
          * 是否排队等待
          */
         private Boolean waitEnabled = false;
+    }
+
+    /**
+     * API 日志嵌套配置
+     */
+    @Data
+    public static class ApiLogConfig {
+        /**
+         * 采样率（0.0-1.0，默认 1.0 全量）；采样按 traceId 确定性取模，同一链路判定一致；异常日志不受采样控制
+         */
+        private Double sampleRate = 1.0;
+
+        /**
+         * 序列化长度上限（字符），默认 4096；超限仅记录 &lt;truncated, len=N&gt; 截断标记
+         */
+        private Integer maxSerializeLength = 4096;
     }
 }

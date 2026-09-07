@@ -15,28 +15,30 @@ import lombok.Data;
  *     <li>每页条数最小值为 1，最大值由 {@link SystemConstants#MAX_PAGE_SIZE} 控制（默认 1000），防止全表查询</li>
  * </ul>
  *
- * <p>典型用法：</p>
+ * <p>原生 SQL 过渡期典型用法（offset / 总页数计算）：</p>
  * <pre>{@code
- * // 构建分页参数
- * PageUtils page = PageUtils.of(1, 10);
- * page.getOffset();          // 0（SQL LIMIT offset 值）
- * page.getPageNum();         // 1
- * page.getPageSize();        // 10
- *
- * // 与 MyBatis-Plus 集成
- * Page<User> mpPage = page.toMpPage();
- * IPage<User> result = userMapper.selectPage(mpPage, wrapper);
- *
- * // 计算总页数
- * long totalPages = PageUtils.calcTotalPages(100L, 10);  // 10
+ * PageUtils page = PageUtils.of(2, 10);
+ * page.getOffset();                     // 10（SQL LIMIT offset 值）
  * long totalPages = PageUtils.calcTotalPages(101L, 10);  // 11
- *
- * // 构建默认分页（第1页，每页10条）
- * PageUtils page = PageUtils.defaultPage();
  * }</pre>
  *
+ * <p>统一分页 API（1.1.0 起，推荐）：</p>
+ * <pre>{@code
+ * // 入参契约：PageParam（配合 @Valid 校验 pageNum >= 1、1 <= pageSize <= 1000）
+ * // 查询转换：param.toPage() → MyBatis-Plus 的 Page/IPage
+ * // 返回构造：PageData.of(iPage)（含 list/total/pageNum/pageSize/totalPage/hasNext）
+ * }</pre>
+ *
+ * @deprecated 自 1.1.0 起弃用，计划保留 2 个大版本后（预计 ≥ 3.0）删除。
+ * 替代 API：分页入参使用 hc-mybatis-plus 的 PageParam（配合 {@code @Valid} 校验后调用 {@code toPage()}），
+ * 分页结果统一使用 PageData.of(IPage) 构建。弃用期内本类行为保持不变
+ * （页码修正 / offset / 总页数计算），原生 SQL 过渡可继续使用；
+ * 迁移对照与删除排期见 hc-mybatis-plus-spring-boot-starter README「分页 API 收敛」。
+ *
  * @author hc-framework
+ * @since 1.0.0（1.1.0 起弃用）
  */
+@Deprecated
 @Data
 public class PageUtils {
 
@@ -55,6 +57,30 @@ public class PageUtils {
         this.pageSize = normalizePageSize(pageSize);
     }
 
+    // ==================== 实例访问器 ====================
+
+    /**
+     * 获取当前页码
+     *
+     * @return 页码（从 1 开始）
+     * @deprecated 自 1.1.0 起弃用，请使用 PageParam
+     */
+    @Deprecated
+    public int getPageNum() {
+        return pageNum;
+    }
+
+    /**
+     * 获取每页条数
+     *
+     * @return 每页条数
+     * @deprecated 自 1.1.0 起弃用，请使用 PageParam
+     */
+    @Deprecated
+    public int getPageSize() {
+        return pageSize;
+    }
+
     // ==================== 工厂方法 ====================
 
     /**
@@ -64,6 +90,7 @@ public class PageUtils {
      * @param pageSize 每页条数（最小 1，最大 {@link SystemConstants#MAX_PAGE_SIZE}）
      * @return 分页参数
      */
+    @Deprecated
     public static PageUtils of(int pageNum, int pageSize) {
         return new PageUtils(pageNum, pageSize);
     }
@@ -73,6 +100,7 @@ public class PageUtils {
      *
      * @return 默认分页参数
      */
+    @Deprecated
     public static PageUtils defaultPage() {
         return new PageUtils(SystemConstants.DEFAULT_PAGE_NUM, SystemConstants.DEFAULT_PAGE_SIZE);
     }
@@ -90,6 +118,7 @@ public class PageUtils {
      *
      * @return SQL 偏移量
      */
+    @Deprecated
     public long getOffset() {
         return (long) (pageNum - 1) * pageSize;
     }
@@ -100,6 +129,7 @@ public class PageUtils {
      * @param total 总记录数
      * @return 总页数，total 为 0 时返回 0
      */
+    @Deprecated
     public long calcTotalPages(long total) {
         return calcTotalPages(total, pageSize);
     }
@@ -117,6 +147,7 @@ public class PageUtils {
      * @param pageSize 每页条数
      * @return 总页数
      */
+    @Deprecated
     public static long calcTotalPages(long total, int pageSize) {
         if (total <= 0) {
             return 0L;
@@ -129,6 +160,7 @@ public class PageUtils {
      *
      * @return true 表示第一页
      */
+    @Deprecated
     public boolean isFirstPage() {
         return pageNum == 1;
     }
@@ -139,6 +171,7 @@ public class PageUtils {
      * @param total 总记录数
      * @return true 表示最后一页
      */
+    @Deprecated
     public boolean isLastPage(long total) {
         return pageNum >= calcTotalPages(total);
     }

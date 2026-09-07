@@ -18,7 +18,7 @@
 
 ```xml
 <dependency>
-    <groupId>com.hnhegui.framework</groupId>
+    <groupId>com.hc.framework</groupId>
     <artifactId>hc-excel-spring-boot-starter</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>

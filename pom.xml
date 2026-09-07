@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.hnhegui.framework</groupId>
+    <groupId>com.hc.framework</groupId>
     <artifactId>hc-spring-cloud-framework</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -249,52 +249,52 @@
 
             <!-- 自定义模块管理 -->
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-common-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-excel-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-redis-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-web-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-mybatis-plus-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-satoken-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-satoken-gateway-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-logging-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-oss-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hnhegui.framework</groupId>
+                <groupId>com.hc.framework</groupId>
                 <artifactId>hc-rocketmq-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>

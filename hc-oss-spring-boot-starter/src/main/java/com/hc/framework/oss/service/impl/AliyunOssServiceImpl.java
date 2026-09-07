@@ -6,6 +6,7 @@ import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.hc.framework.oss.config.OssProperties;
 import com.hc.framework.oss.service.OssService;
+import com.hc.framework.oss.support.OssUploadValidator;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -23,14 +24,31 @@ import java.util.Date;
 public class AliyunOssServiceImpl implements OssService {
 
     private final OssProperties.AliyunOssConfig config;
+    private final OssUploadValidator validator;
     private OSS ossClient;
 
     public AliyunOssServiceImpl(OssProperties.AliyunOssConfig config) {
+        this(config, new OssUploadValidator());
+    }
+
+    public AliyunOssServiceImpl(OssProperties.AliyunOssConfig config, OssUploadValidator validator) {
         this.config = config;
+        this.validator = validator;
+    }
+
+    /**
+     * 测试注入 mock 客户端（不经容器生命周期）
+     */
+    AliyunOssServiceImpl(OssProperties.AliyunOssConfig config, OssUploadValidator validator, OSS ossClient) {
+        this(config, validator);
+        this.ossClient = ossClient;
     }
 
     @PostConstruct
     public void init() {
+        if (ossClient != null) {
+            return;
+        }
         ClientBuilderConfiguration clientBuilderConfiguration = new ClientBuilderConfiguration();
         // 开启CNAME选项以支持自定义域名访问
         clientBuilderConfiguration.setSupportCname(true);
@@ -71,17 +89,32 @@ public class AliyunOssServiceImpl implements OssService {
     @Override
     public String upload(String fileName, InputStream inputStream, String contentType, long contentLength) {
         try {
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentType(contentType);
-            if (contentLength > 0) {
-                metadata.setContentLength(contentLength);
+            // 校验（扩展名/魔数/声明大小），失败抛 IllegalArgumentException，SDK 不会收到请求
+            InputStream uploadStream = validator.prepare(fileName, inputStream, contentLength);
+            try {
+                ObjectMetadata metadata = new ObjectMetadata();
+                metadata.setContentType(contentType);
+                if (contentLength > 0) {
+                    metadata.setContentLength(contentLength);
+                }
+                ossClient.putObject(config.getBucketName(), fileName, uploadStream, metadata);
+                return getUrl(fileName);
+            } catch (Exception e) {
+                throw translateSdkException(fileName, e);
             }
-            ossClient.putObject(config.getBucketName(), fileName, inputStream, metadata);
-            return getUrl(fileName);
-        } catch (Exception e) {
-            log.error("阿里云OSS上传失败: {}", fileName, e);
-            throw new RuntimeException("文件上传失败", e);
+        } finally {
+            // 校验失败/成功/上传异常路径均关闭原始流
+            OssUploadValidator.closeQuietly(inputStream);
         }
+    }
+
+    private RuntimeException translateSdkException(String fileName, Exception e) {
+        if (OssUploadValidator.containsCause(e, OssUploadValidator.UploadSizeLimitExceededException.class)) {
+            return new IllegalArgumentException(
+                    "文件大小超出限制: 实际读取超过 " + validator.getMaxFileSize() + " 字节", e);
+        }
+        log.error("阿里云OSS上传失败: {}", fileName, e);
+        return new RuntimeException("文件上传失败", e);
     }
 
     @Override

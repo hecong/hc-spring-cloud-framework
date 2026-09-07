@@ -9,12 +9,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -45,6 +49,55 @@ public class GlobalExceptionHandler {
     public Result<Void> handleBusinessException(BusinessException e, HttpServletRequest request) {
         log.warn("业务异常: {}", e.getMessage());
         Result<Void> result = Result.error(e.getCode(), e.getMessage());
+        result.setPath(request.getRequestURI());
+        return result;
+    }
+
+    /**
+     * 请求方法不支持
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public Result<Void> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        log.warn("请求方法不支持: {}", request.getRequestURI());
+        Result<Void> result = Result.error(HttpStatus.METHOD_NOT_ALLOWED.value(), "请求方法不支持");
+        result.setPath(request.getRequestURI());
+        return result;
+    }
+
+    /**
+     * 请求内容类型不支持
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    public Result<Void> handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
+        log.warn("不支持的请求内容类型: {}", request.getRequestURI());
+        Result<Void> result = Result.error(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(), "不支持的请求内容类型");
+        result.setPath(request.getRequestURI());
+        return result;
+    }
+
+    /**
+     * 上传大小超限
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.CONTENT_TOO_LARGE)
+    public Result<Void> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e, HttpServletRequest request) {
+        log.warn("上传文件大小超过限制: {}", request.getRequestURI());
+        Result<Void> result = Result.error(HttpStatus.CONTENT_TOO_LARGE.value(), "上传文件大小超过限制");
+        result.setPath(request.getRequestURI());
+        return result;
+    }
+
+    /**
+     * 缺少路径变量
+     */
+    @ExceptionHandler(MissingPathVariableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleMissingPathVariableException(MissingPathVariableException e, HttpServletRequest request) {
+        String message = String.format("缺少路径变量: %s", e.getVariableName());
+        log.warn(message);
+        Result<Void> result = Result.error(HttpStatus.BAD_REQUEST.value(), message);
         result.setPath(request.getRequestURI());
         return result;
     }

@@ -2,6 +2,7 @@ package com.hc.framework.oss.service.impl;
 
 import com.hc.framework.oss.config.OssProperties;
 import com.hc.framework.oss.service.OssService;
+import com.hc.framework.oss.support.OssUploadValidator;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
@@ -35,6 +36,7 @@ public class TencentCosServiceImpl implements OssService {
 
     private final COSClient cosClient;
     private final OssProperties.TencentCosConfig config;
+    private final OssUploadValidator validator;
 
     /**
      * COS API服务端点（固定值）
@@ -42,9 +44,21 @@ public class TencentCosServiceImpl implements OssService {
     private static final String SERVICE_API_ENDPOINT = "cos.tencentcloudapi.com";
 
     public TencentCosServiceImpl(OssProperties.TencentCosConfig config) {
-        this.config = config;
-        this.cosClient = createCosClient(config);
+        this(config, new OssUploadValidator());
+    }
+
+    public TencentCosServiceImpl(OssProperties.TencentCosConfig config, OssUploadValidator validator) {
+        this(config, validator, createCosClient(config));
         log.info("腾讯云COS客户端初始化完成，region={}", config.getRegion());
+    }
+
+    /**
+     * 测试注入 mock 客户端
+     */
+    TencentCosServiceImpl(OssProperties.TencentCosConfig config, OssUploadValidator validator, COSClient cosClient) {
+        this.config = config;
+        this.validator = validator;
+        this.cosClient = cosClient;
     }
 
     @PreDestroy
@@ -61,7 +75,7 @@ public class TencentCosServiceImpl implements OssService {
      * 如果配置了自定义域名，会在客户端初始化时设置EndpointBuilder，
      * 这样生成的签名URL会使用自定义域名
      */
-    private COSClient createCosClient(OssProperties.TencentCosConfig config) {
+    private static COSClient createCosClient(OssProperties.TencentCosConfig config) {
         // 1. 创建凭证
         COSCredentials credentials = new BasicCOSCredentials(config.getSecretId(), config.getSecretKey());
 
@@ -91,7 +105,7 @@ public class TencentCosServiceImpl implements OssService {
      * @param domain 完整域名（如：https://cdn.example.com）
      * @return 主机部分（如：cdn.example.com）
      */
-    private String extractHost(String domain) {
+    private static String extractHost(String domain) {
         if (domain == null || domain.isBlank()) {
             return null;
         }
@@ -117,27 +131,42 @@ public class TencentCosServiceImpl implements OssService {
     @Override
     public String upload(String fileName, InputStream inputStream, String contentType, long contentLength) {
         try {
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentType(contentType);
-            if (contentLength > 0) {
-                metadata.setContentLength(contentLength);
+            // 校验（扩展名/魔数/声明大小），失败抛 IllegalArgumentException，SDK 不会收到请求
+            InputStream uploadStream = validator.prepare(fileName, inputStream, contentLength);
+            try {
+                ObjectMetadata metadata = new ObjectMetadata();
+                metadata.setContentType(contentType);
+                if (contentLength > 0) {
+                    metadata.setContentLength(contentLength);
+                }
+
+                PutObjectRequest request = new PutObjectRequest(
+                        config.getBucketName(),
+                        fileName,
+                        uploadStream,
+                        metadata
+                );
+
+                cosClient.putObject(request);
+                log.info("腾讯云COS文件上传成功: {}", fileName);
+
+                return getUrl(fileName);
+            } catch (Exception e) {
+                throw translateSdkException(fileName, e);
             }
-
-            PutObjectRequest request = new PutObjectRequest(
-                    config.getBucketName(),
-                    fileName,
-                    inputStream,
-                    metadata
-            );
-
-            cosClient.putObject(request);
-            log.info("腾讯云COS文件上传成功: {}", fileName);
-
-            return getUrl(fileName);
-        } catch (Exception e) {
-            log.error("腾讯云COS文件上传失败: {}", fileName, e);
-            throw new RuntimeException("文件上传失败", e);
+        } finally {
+            // 校验失败/成功/上传异常路径均关闭原始流
+            OssUploadValidator.closeQuietly(inputStream);
         }
+    }
+
+    private RuntimeException translateSdkException(String fileName, Exception e) {
+        if (OssUploadValidator.containsCause(e, OssUploadValidator.UploadSizeLimitExceededException.class)) {
+            return new IllegalArgumentException(
+                    "文件大小超出限制: 实际读取超过 " + validator.getMaxFileSize() + " 字节", e);
+        }
+        log.error("腾讯云COS文件上传失败: {}", fileName, e);
+        return new RuntimeException("文件上传失败", e);
     }
 
     @Override

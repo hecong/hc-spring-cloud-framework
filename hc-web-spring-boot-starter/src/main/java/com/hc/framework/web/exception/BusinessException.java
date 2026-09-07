@@ -1,6 +1,7 @@
 package com.hc.framework.web.exception;
 
 import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
 import java.io.Serial;
 
@@ -18,9 +19,12 @@ public class BusinessException extends RuntimeException {
      */
     private final Integer code;
 
+    /**
+     * 业务异常默认错误码：400（BAD_REQUEST 语义，参数不合法/状态冲突等归属 4xx；
+     * 需要显式错误码时使用两参/三参构造）
+     */
     public BusinessException(String message) {
-        super(message);
-        this.code = 500;
+        this(HttpStatus.BAD_REQUEST.value(), message);
     }
 
     public BusinessException(Integer code, String message) {

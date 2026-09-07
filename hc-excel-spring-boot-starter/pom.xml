@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.hnhegui.framework</groupId>
+        <groupId>com.hc.framework</groupId>
         <artifactId>hc-spring-cloud-framework</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
@@ -42,6 +42,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- Spring Boot Configuration Processor -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
         <!-- Lombok -->

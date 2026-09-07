@@ -30,8 +30,8 @@ hc-mybatis-plus-spring-boot-starter
 ├── handler/                     # 处理器
 │   └── DefaultMetaObjectHandler  # 自动填充处理器
 ├── model/                       # 模型
-│   ├── PageParam                 # 分页参数
-│   └── PageResult                # 分页结果
+│   ├── PageParam                 # 分页入参契约
+│   └── PageData                  # 统一分页结果（of(IPage) 构造）
 ├── properties/                  # 配置属性
 │   └── MyBatisPlusProperties     # 配置属性类
 └── service/                     # 服务层
@@ -80,9 +80,9 @@ Controller 接收分页参数
     ↓
 调用 service.pageResult(pageParam)
     ↓
-BaseService 处理分页逻辑
+BaseService 处理分页逻辑（PageParam.toPage() → IPage）
     ↓
-返回 PageResult 对象
+返回 PageData 对象（PageData.of(IPage) 统一构造）
     ↓
 Controller 返回统一响应
 ```
@@ -111,8 +111,8 @@ Controller 返回统一响应
 
 ### 4. 统一分页
 
-- **统一分页参数**：PageParam 封装分页参数
-- **统一分页结果**：PageResult 统一分页响应格式
+- **统一分页参数**：PageParam 封装分页参数（`@Valid` 校验，pageNum ≥ 1、pageSize 1–1000）
+- **统一分页结果**：PageData 统一分页响应格式（`of(IPage)` 构建，含 totalPage/hasNext）
 - **分页插件**：内置分页插件配置
 - **分页参数验证**：自动验证分页参数
 
@@ -294,12 +294,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 ### 7. 使用统一分页
 
+`PageParam` 是**统一分页入参契约**（`pageNum` ≥ 1、`1 ≤ pageSize ≤ 1000`），`PageData` 是**统一分页返回**。
+Controller 层配合 `@Valid` 使用，Service 层查询经 `PageParam.toPage()` 转换、`PageData.of(IPage)` 组装。
+
 #### Controller 层
 
 ```java
 import com.hc.framework.mybatis.entity.User;
+import com.hc.framework.mybatis.model.PageData;
 import com.hc.framework.mybatis.model.PageParam;
 import com.hc.framework.mybatis.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -308,23 +313,38 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user")
 public class UserController {
 
-   private final UserService userService;
+    private final UserService userService;
 
-   public UserController(UserService userService) {
-      this.userService = userService;
-   }
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
-   @GetMapping("/page")
-   public PageResult<User> page(PageParam pageParam) {
-      return userService.pageResult(pageParam);
-   }
+    /**
+     * 分页查询：PageParam 统一入参（@Valid 校验非法值，pageSize 上限 1000），
+     * 返回由 BaseService.pageResult 统一组装为 PageData
+     */
+    @GetMapping("/page")
+    public PageData<User> page(@Valid PageParam pageParam) {
+        return userService.pageResult(pageParam);
+    }
 }
+```
+
+#### 自定义 Mapper 分页（手写 XML / 原生分页条件）
+
+```java
+// 转换：PageParam → MyBatis-Plus Page
+IPage<User> page = pageParam.toPage();
+IPage<User> result = userMapper.selectPage(page, queryWrapper);
+
+// 返回：IPage → PageData（list/total/pageNum/pageSize/totalPage/hasNext）
+PageData<User> data = PageData.of(result);
 ```
 
 #### 前端请求
 
 ```http
-GET /api/user/page?page=1&size=10&sort=createTime&order=desc
+GET /api/user/page?pageNum=1&pageSize=10
 ```
 
 #### 响应结果
@@ -346,9 +366,10 @@ GET /api/user/page?page=1&size=10&sort=createTime&order=desc
     }
   ],
   "total": 100,
-  "page": 1,
-  "size": 10,
-  "totalPages": 10
+  "pageNum": 1,
+  "pageSize": 10,
+  "totalPage": 10,
+  "hasNext": true
 }
 ```
 
@@ -629,8 +650,8 @@ public class CustomMetaObjectHandler implements MetaObjectHandler {
 ```java
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hc.framework.mybatis.entity.User;
+import com.hc.framework.mybatis.model.PageData;
 import com.hc.framework.mybatis.model.PageParam;
 import com.hc.framework.mybatis.service.BaseServiceImpl;
 import com.hc.framework.mybatis.mapper.UserMapper;
@@ -639,28 +660,28 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> {
 
-   /**
-    * 自定义条件分页查询
-    */
-   public PageResult<User> pageByCondition(PageParam pageParam, String username, Integer status) {
-      // 构建查询条件
-      LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-      if (username != null && !username.isEmpty()) {
-         wrapper.like(User::getUsername, username);
-      }
-      if (status != null) {
-         wrapper.eq(User::getStatus, status);
-      }
+    /**
+     * 自定义条件分页查询
+     */
+    public PageData<User> pageByCondition(PageParam pageParam, String username, Integer status) {
+        // 构建查询条件
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        if (username != null && !username.isEmpty()) {
+            wrapper.like(User::getUsername, username);
+        }
+        if (status != null) {
+            wrapper.eq(User::getStatus, status);
+        }
 
-      // 构建分页参数
-      IPage<User> page = new Page<>(pageParam.getPage(), pageParam.getSize());
+        // 分页转换：PageParam.toPage() 生成 MyBatis-Plus Page
+        IPage<User> page = pageParam.toPage();
 
-      // 执行分页查询
-      page = baseMapper.selectPage(page, wrapper);
+        // 执行分页查询
+        page = baseMapper.selectPage(page, wrapper);
 
-      // 构建分页结果
-      return PageResult.build(page);
-   }
+        // 返回统一构造：PageData.of(IPage)
+        return PageData.of(page);
+    }
 }
 ```
 
@@ -953,8 +974,8 @@ public class GeneratorTest {
 
 ### 4. 控制器设计
 
-- 使用 PageParam 接收分页参数
-- 返回 PageResult 统一分页结果
+- 使用 PageParam（配合 @Valid）接收分页参数
+- 返回 PageData 统一分页结果
 - 业务异常使用 BusinessException
 - 参数校验使用 @Valid 注解
 
@@ -979,6 +1000,35 @@ public class GeneratorTest {
 - 项目源码：[hc-spring-cloud-framework](https://github.com/your-repo/hc-spring-cloud-framework)
 - 问题反馈：[Issues](https://github.com/your-repo/hc-spring-cloud-framework/issues)
 
+## 分页 API 收敛（自 1.1.0）
+
+自 1.1.0 起，分页收敛为**唯一契约**，避免两套分页 API 长期并存导致业务写法分裂：
+
+- **入参契约**：`PageParam`（`pageNum` ≥ 1、`1 ≤ pageSize ≤ 1000`，配合 `@Valid` 校验）
+- **查询转换**：`PageParam.toPage()` → MyBatis-Plus `Page/IPage`
+- **返回构造**：`PageData.of(IPage)`（含 list/total/pageNum/pageSize/totalPage/hasNext）
+
+`hc-common` 的 `PageUtils` 已标记 `@Deprecated`（类与公开方法），**保留 2 个大版本（预计 ≥ 3.0）后删除**。
+
+### 新旧写法对照
+
+| 场景 | 旧写法（已弃用） | 新写法（推荐） |
+|------|----------------|---------------|
+| Controller 分页入参 | `PageUtils.of(pageNum, pageSize)` | `@Valid PageParam pageParam` |
+| MyBatis-Plus 分页查询转换 | 手写 `new Page<>(...)` | `pageParam.toPage()` |
+| 分页结果组装 | 手写 totalPage/hasNext | `PageData.of(iPage)` |
+| 快捷条件分页 | 自写 IPage 手工计算 | `baseService.pageResult(pageParam[, wrapper])` |
+
+### 原生 SQL 用户过渡指引
+
+- **分页插件场景（MyBatis-Plus）**：过渡期即可迁移到 `PageParam + toPage() + PageData.of(IPage)`。
+- **纯手写分页（XML `LIMIT offset`）**：过渡期内 `PageUtils` 仍可用（`getOffset()` /
+  `calcTotalPages` / 非法值修正行为不变）；删除时由独立 change 提供迁移方案，
+  业务也可现在就内联计算 `offset = (pageNum - 1) * pageSize`，逐步解除对 `PageUtils` 的依赖。
+- **删除排期**：自 1.1.0 起保留 2 个大版本（≥ 3.0），删除前不改变既有行为（不边废弃边改语义）。
+
 ## 版本历史
 
+- **1.1.0**：分页 API 收敛——`PageUtils` 标记弃用（保留 2 个大版本）、
+  明确 `PageParam`/`PageData` 为唯一分页入参/返回契约
 - **1.0.0**：初始版本，提供自动配置、动态数据源、统一分页、自动填充、乐观锁等功能

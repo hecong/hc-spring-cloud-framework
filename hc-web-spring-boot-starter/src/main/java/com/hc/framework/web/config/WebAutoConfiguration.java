@@ -74,4 +74,13 @@ public class WebAutoConfiguration {
         bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return bean;
     }
+
+    /**
+     * 将 hc.web.trusted-proxies 注入 IpUtils（业务可自定义同名 Bean 覆盖）
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public IpTrustedProxiesInitializer ipTrustedProxiesInitializer() {
+        return new IpTrustedProxiesInitializer(webProperties.getTrustedProxies());
+    }
 }

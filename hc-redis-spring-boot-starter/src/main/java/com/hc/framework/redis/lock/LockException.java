@@ -26,6 +26,16 @@ public final class LockException extends RuntimeException {
     public static final int LOCK_BUSY = 1003;
 
     /**
+     * 持锁执行业务逻辑时线程被中断
+     */
+    public static final int LOCK_INTERRUPTED = 1004;
+
+    /**
+     * 持锁执行业务逻辑失败（回调抛出受检异常等）
+     */
+    public static final int LOCK_EXECUTION_FAILED = 1005;
+
+    /**
      * 业务错误码
      */
     private Integer code;
@@ -63,5 +73,10 @@ public final class LockException extends RuntimeException {
         super(message);
         this.code = code;
         this.isError = isError;
+    }
+
+    public LockException(int code, String message, Throwable cause) {
+        super(message, cause);
+        this.code = code;
     }
 }

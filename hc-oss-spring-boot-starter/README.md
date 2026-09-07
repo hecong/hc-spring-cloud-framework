@@ -4,6 +4,17 @@
 
 统一对象存储（OSS）Starter，提供对阿里云 OSS、MinIO、腾讯云 COS 的统一操作接口。通过单一配置项 `default-type` 选择云服务商，**不允许混用**。
 
+## 升级与发布顺序（BREAKING）
+
+> 本版本包含 **破坏性变更**（上传安全加固）：
+
+1. **默认开启上传校验**：升级后所有上传将按「扩展名白名单 + 文件头魔数 + 大小上限」校验；
+   原上传高扩展名文件 / 伪造扩展名 / 超限文件的调用将被拒绝并抛 `IllegalArgumentException`。
+2. **框架改为关闭流**：`upload()` 在所有路径（成功 / 校验失败 / 上传异常）都会关闭调用方传入的
+   `InputStream`，**调用方不得复用传入流**（原契约"由调用方关闭"废弃）。
+3. 如需灰度过渡：先设 `hc.oss.upload-validation.enabled=false`（仅关闭校验，流仍由框架关闭）上线观察，
+   确认调用方无复用传入流后再开启校验。
+
 ## 设计思路
 
 ### 核心设计
@@ -24,6 +35,8 @@ OssService（统一接口）
 - **启动即校验**：构造器阶段检查必填配置，缺失直接抛出 `IllegalStateException` 阻止启动
 - **按需引入 SDK**：三个云服务 SDK 均为 `<optional>true</optional>`，消费方按需引入
 - **URL 安全编码**：`getUrl()` 对文件名做分段 URL 编码，保留路径分隔符 `/`
+- **上传统一校验**：扩展名白名单 + 文件头魔数（magic number）+ 大小上限三重校验，可配置
+- **框架负责关流**：`upload()` 在所有路径均关闭调用方传入的流（自 1.0.1 起）
 
 ## 功能特性
 
@@ -43,7 +56,7 @@ OssService（统一接口）
 ```xml
 <!-- 基础依赖（必选） -->
 <dependency>
-    <groupId>com.hnhegui.framework</groupId>
+    <groupId>com.hc.framework</groupId>
     <artifactId>hc-oss-spring-boot-starter</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>
@@ -161,12 +174,33 @@ hc:
       # domain: https://cdn.example.com           # 可选：自定义域名
 ```
 
+### 上传校验配置
+
+```yaml
+hc:
+  oss:
+    # default-type 与所选 provider 配置省略
+    upload-validation:
+      enabled: true                          # 默认开启；false 关闭校验（仅关流仍生效）
+      allowed-extensions:                    # 默认内置表；配置后整体覆盖（不叠加），自动转小写并容忍前导点号
+        - jpg
+        - png
+        - .docx
+      max-file-size: 104857600               # 单文件大小上限（字节），默认 100MB
+```
+
+默认扩展名白名单：`jpg/jpeg/png/gif/webp/bmp`、`pdf`、`doc/docx/xls/xlsx/ppt/pptx`、
+`txt/csv/md`、`zip/rar/7z`、`mp3/mp4`。`jsp/exe/js/php/sh`、无后缀默认拒绝。
+
 ### 完整配置项
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `hc.oss.enabled` | `Boolean` | `true` | 总开关 |
 | `hc.oss.default-type` | `String` | `aliyun` | 存储类型：`aliyun` / `minio` / `tencent-cos` |
+| `hc.oss.upload-validation.enabled` | `Boolean` | `true` | 是否启用上传校验（扩展名/魔数/大小）；false 仅关闭校验 |
+| `hc.oss.upload-validation.allowed-extensions` | `List<String>` | 内置默认表 | 扩展名白名单；为空/配置后覆盖默认（不叠加） |
+| `hc.oss.upload-validation.max-file-size` | `Long` | `104857600` | 单文件大小上限（字节） |
 | `hc.oss.aliyun.endpoint` | `String` | — | 阿里云 OSS endpoint |
 | `hc.oss.aliyun.access-key-id` | `String` | — | 阿里云 AccessKey ID |
 | `hc.oss.aliyun.access-key-secret` | `String` | — | 阿里云 AccessKey Secret |
@@ -196,7 +230,8 @@ hc:
 | `getUrl(fileName, expireTime)` | `String` | 获取带签名的临时访问 URL（expireTime 单位：秒） |
 | `exists(fileName)` | `boolean` | 检查文件是否存在 |
 
-> **注意**：`upload()` 方法的 `InputStream` 由调用方负责关闭，SDK 内部不会关闭传入的流。
+> **注意（自 1.0.1 起）**：`upload()` 方法在**所有路径**（成功 / 校验失败 / 上传异常）均由框架关闭传入的
+> `InputStream`；调用方**不得复用**该流，如需再次上传请重新创建流。
 
 ---
 
@@ -246,6 +281,17 @@ hc:
 ```
 java.lang.IllegalStateException: MinIO endpoint 未配置 (hc.oss.minio.endpoint)
 ```
+
+### 上传校验行为说明
+
+- **校验链顺序**：扩展名白名单 → 文件头魔数（`jsp` 伪装 `.jpg` 等伪造后缀被拒）→ 大小上限。
+- **大小校验两种形态**：`contentLength > 0` 时在调用 SDK 前按声明大小预检；
+  `contentLength = -1`（未知大小，二/三参 upload）时框架以限制读取流包装，SDK 读流累计超限即中止。
+- **覆盖边界**：`txt` / `csv` / `md` 等无统一二进制签名的文本类型**仅做后缀 + 大小校验**，
+  不做魔数比对；自定义扩展名（如业务加的 `.log`）同样按"无签名仅后缀+大小"处理。
+- **异常语义**：校验失败抛 `IllegalArgumentException`（扩展名不符 / 内容与扩展名不符 / 大小超限），
+  与 SDK 上传失败（`RuntimeException("文件上传失败")`）可区分；超限读取抛出的框架标记异常会被解包为该语义。
+- **过渡路径**：`hc.oss.upload-validation.enabled=false` 关闭全部校验但保留关流，可用于升级灰度。
 
 ### 文件上传（指定 Content-Type）
 
@@ -320,4 +366,6 @@ hc:
 
 ## 版本历史
 
+- **1.0.1**：上传安全加固（BREAKING）——默认扩展名白名单 + 魔数 + 大小上限校验（`hc.oss.upload-validation` 可配）；
+  `upload()` 全路径由框架关闭传入流，调用方不得复用
 - **1.0.0**：初始版本，提供阿里云 OSS、MinIO、腾讯云 COS 统一操作接口

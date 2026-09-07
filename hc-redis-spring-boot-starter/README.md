@@ -2,6 +2,18 @@
 
 基于 Spring Boot 的 Redis 缓存和分布式锁 Starter，提供缓存管理、分布式锁、防重复提交等功能。
 
+## 升级与发布顺序（请先阅读）
+
+> 本版本包含 **破坏性变更**：多态反序列化白名单（安全加固）。按以下顺序操作可避免升级后缓存读取失败：
+
+1. **业务先配置白名单**：在应用中配置 `hc.redis.allowed-packages`，将自身实体 / DTO / 缓存对象所在包前缀全部列入
+   （该配置在旧框架版本中会被忽略，不影响旧版运行，可先行发布）。
+2. **再升级框架版本**：升级后多态反序列化仅放行「默认白名单 ∪ 已配置白名单」中的类型；
+   默认白名单未覆盖的业务包缓存对象将被拒绝并抛出反序列化异常。
+3. **观察与清理**：升级后关注反序列化异常日志（会明确指出被拒类型），对白名单外的存量缓存 key 执行清理或刷新一次即可恢复。
+4. **代码适配（按需）**：本版本同时收口了 Redis key 前缀常量与自增序列取号方式、调整了锁内异常透传语义，
+   若代码中手动内联过 `seq:` / `seq:global:` 等字面量或依赖锁异常包装行为，请按文末「注意事项」适配。
+
 ## 功能特性
 
 - **Redis 缓存**：支持 JSON 序列化，支持自定义过期时间
@@ -46,6 +58,21 @@ public class Application {
 ```
 
 ## 配置说明
+
+### 多态反序列化白名单（业务包必配）
+
+```yaml
+hc:
+  redis:
+    allowed-packages:
+      - com.hnhegui.order.domain.
+      - com.hnhegui.market.entity.
+```
+
+- 与默认白名单（`com.hc.framework.`、`com.hnhegui.`、`java.util.`、`java.lang.`、`java.time.`）**取并集，仅追加不覆盖**；
+  前缀缺省结尾 `.` 会自动补全。
+- 业务实体 / DTO 所在包若不在默认白名单内，**必须在本版本升级前先行配置**，否则升级后缓存反序列化会被白名单拒绝并抛异常。
+- 新增缓存对象的包前缀建议按下方「Key 命名规范」统一规划，并在本文档中登记。
 
 ### 缓存配置
 
@@ -208,16 +235,20 @@ public class ProductService {
 
 ## 注意事项
 
-### 1. 序列化
+### 1. 序列化（多态白名单）
 
-- 默认使用 JSON 序列化，支持 JDK8 日期时间类型
-- 缓存的类需要有无参构造方法
+- 默认使用 JSON 序列化，支持 JDK8+ 日期时间类型；缓存的类需要有无参构造方法
+- 缓存值会携带类型元数据（类名等），反序列化仅放行「默认白名单 ∪ `hc.redis.allowed-packages`」中的类型，
+  白名单外类型会被拒绝（抛类型校验异常，防止反序列化 RCE）
+- 业务包默认已覆盖（`com.hc.framework.` / `com.hnhegui.`）则无需配置；否则请按「配置说明 → 多态反序列化白名单」配置
+- 若反序列化因白名单被拒，清理/刷新该缓存 key 一次即可；也请检查业务缓存对象是否遗漏配置其包前缀
 
 ### 2. 分布式锁
 
-- 默认使用可重入锁，自动续期
-- 锁的 Key 建议包含业务标识，避免冲突
-- 批量锁使用 Redisson 的 MultiLock，保证原子性
+- 默认使用可重入锁，自动续期；锁的 Key 建议包含业务标识，避免冲突；批量锁使用 Redisson 的 MultiLock
+- **异常语义（自本版本起）**：锁内回调抛出的 `RuntimeException`（如业务异常）**原样透传不包装**；
+  受检异常包装为 `LOCK_EXECUTION_FAILED`（原始异常作为 cause 保留）；`InterruptedException` 会先恢复线程中断标志再抛 `LOCK_INTERRUPTED`
+- 无论成功、异常或中断，锁都会在退出前释放，后续线程可再次获取
 
 ### 3. 防重复提交
 
@@ -225,11 +256,16 @@ public class ProductService {
 - SPEL 表达式中可使用 `args`（参数数组）和 `target`（目标对象）
 - 建议根据业务场景设置合理的过期时间
 
-### 4. 缓存 Key 规范
+### 4. 缓存 Key 命名规范（新增 key 必读）
 
-- 避免使用特殊字符
-- 建议格式：`业务:模块:标识`
-- 批量删除时慎用 `*` 通配符
+- **新增前缀统一为：`hc:{模块}:{业务}`**，模块 / 业务使用小写字母与连字符
+  （示例：`hc:order:lock:create:123`、`hc:order:cache:detail:456`）
+- **禁止新增**无业务语义的裸前缀；新增前缀统一经 `RedisKeyConstants` 常量引用，不再内联字面量
+- 存量前缀（`repeat:submit:`、`seq:`、`seq:global:` 及 LockTemplate 的业务 key）为兼容线上数据保留原值，不做强制迁移
+- 批量删除 `deleteByPrefix` 基于 **SCAN 游标 + 分批 DELETE**，不会阻塞 Redis 单线程、幂等可重入；
+  但前缀匹配量极大时耗时随 key 数量线性增长，请评估调用频率，严禁使用空前缀做全库删除
+- 自增序列取号已由单条 Lua 原子完成（INCR + 首次 EXPIRE 2 天），不会残留无过期 key；
+  底层取值缺失时返回全 0（如 `0000`），请勿将其当作有效业务号持久化
 
 ### 5. 异常处理
 
@@ -242,10 +278,17 @@ try {
     if (e.getCode() == LockException.LOCK_BUSY) {
         // 锁被占用
     } else if (e.getCode() == LockException.LOCK_ACQUIRE_FAILED) {
-        // 获取锁失败
+        // 获取锁失败 / 等待获取锁时被中断
+    } else if (e.getCode() == LockException.LOCK_INTERRUPTED) {
+        // 持锁执行时线程被中断（中断标志已恢复）
+    } else if (e.getCode() == LockException.LOCK_EXECUTION_FAILED) {
+        // 持锁执行业务逻辑失败（e.getCause() 为原始异常）
     }
 }
 ```
+
+> 注意：锁内回调抛出的 RuntimeException 会原样透传，不会进入本 `catch (LockException)` 分支，
+> 请按业务异常（如 `BusinessException`）的既有全局处理逻辑捕获。
 
 ## 依赖说明
 

@@ -19,7 +19,7 @@
 
 ```xml
 <dependency>
-    <groupId>com.hnhegui.framework</groupId>
+    <groupId>com.hc.framework</groupId>
     <artifactId>hc-rocketmq-spring-boot-starter</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>
@@ -313,6 +313,64 @@ spring:
 ### TraceId 传递（可选）
 
 引入 `hc-logging-spring-boot-starter` 后，消息的 `traceId` 会自动设置到 MDC，实现全链路追踪。不引入时降级为直接操作 MDC，不影响消息收发。
+
+---
+
+## 本地运行示例
+
+示例代码位于本模块 **`src/test/java/com/hc/framework/rocketmq/example`** 包（仅随 test 编译，不会进入发布的 jar，也不会被引入方业务工程扫描加载）：
+
+| 示例类 | 演示能力 | 关键 Topic / Tag |
+|---|---|---|
+| `MqTestController` | 发送类 REST 入口：同步 `/normal`、异步 `/async`、单向 `/oneway`、批量 `/batch`、延迟 `/delay`、顺序 `/orderly` | `TEST_NORMAL_TOPIC` / `TEST_ORDER_TOPIC` / `TEST_BATCH_TOPIC`，Tag 统一 `TEST_TAG` |
+| `NormalMessageConsumer` | 普通 push 消费：继承 `BaseMqConsumer<T>`，只需实现 `doConsume(T)`，泛型自动反序列化 | 订阅上述发送 Topic |
+| `TransactionMessageChecker` | 事务消息回查：继承 `BaseTransactionChecker<T>`，泛型自动反序列化，无需手动 `from(msg)` | 事务场景使用自有 Topic |
+| `TestMessageDTO` | 示例消息体 | - |
+
+### 运行前提
+
+1. **基础设施**：一套可访问的 RocketMQ 5.x 环境。本 starter 基于 gRPC 客户端，需提供 **Proxy 端点**（默认 gRPC 端口 `8081`），可用本地 Docker 或官方 quickstart 启动 NameServer + Broker（Proxy）；远程环境则替换为实际端点地址。
+2. **关键配置**（test resources 的 `application.yml`）：
+
+```yaml
+rocketmq:
+  producer:
+    endpoints: localhost:8081     # gRPC Proxy 端点（生产者 + push consumer 共用）
+    request-timeout: 3
+    max-attempts: 3
+  simple-consumer:
+    endpoints: ${rocketmq.producer.endpoints}
+    consumer-group: example-group  # 示例消费组
+    await-duration: 30
+```
+
+> 示例消息使用的 Topic（`TEST_NORMAL_TOPIC` 等）与消费组需在 Broker 侧已创建或允许自动创建。
+
+### 运行步骤
+
+示例类属于 `src/test` 参考代码，不会自动被执行，需要宿主 Spring Boot 应用上下文来装配。推荐两种方式：
+
+**方式一（推荐，复制到业务工程验证）**
+
+1. 将 `example` 包下的类复制到业务工程的 `src/test/java`（或直接复制代码到业务类）；
+2. 按「配置说明」配置 endpoints 与消费组；
+3. 用 `@SpringBootTest` 测试类（或直接启动业务应用）加载上下文，观察 `NormalMessageConsumer` 的消费日志；如需 REST 入口触发发送，在业务工程中引入 `spring-boot-starter-web` 后访问 `/mq/test/normal?content=hello` 等接口。
+
+**方式二（本模块内最小引导）**
+
+```java
+@SpringBootApplication
+@Import(NormalMessageConsumer.class)   // 引入示例消费 Bean（按需增删）
+public class LocalMqBootstrap {
+    public static void main(String[] args) {
+        SpringApplication.run(LocalMqBootstrap.class, args);
+    }
+}
+```
+
+在本模块 test 集内创建上述引导类后运行（注意需先启动 RocketMQ Proxy），即可在日志中看到示例消费者的收发效果。
+
+> **示例边界约定（评审检查项）**：所有示例 / 演示类**只能放在 `src/test`**（如 `example` 包），**禁止写入 `src/main`**，否则业务工程引入本 starter 后会错误扫描并加载示例 Bean 与 REST 端点（如 `MqTestController` 被误暴露）。模块 `package` 产物已核验不含 `com/hc/framework/rocketmq/example/` 类；`src/main` 不允许出现对 `example` 包的引用。
 
 ---
 

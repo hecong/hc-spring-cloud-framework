@@ -1,6 +1,8 @@
 package com.hc.framework.common.util;
 
-import com.hc.framework.common.constant.SystemConstants;
+import org.dromara.hutool.core.collection.CollUtil;
+import org.dromara.hutool.core.map.MapUtil;
+import org.dromara.hutool.core.text.StrUtil;
 
 import java.util.Collection;
 import java.util.Map;
@@ -9,8 +11,9 @@ import java.util.regex.Pattern;
 /**
  * 字符串工具类
  *
- * <p>提供项目中最常用的字符串操作方法，补充 Hutool StrUtil 不便直接引用的场景。
- * 所有方法均为静态工具方法，不依赖 Spring 容器。</p>
+ * <p>提供项目中最常用的字符串操作方法。判空、默认值等与 Hutool 6 语义等价的通用能力
+ * 直接委托 {@link StrUtil} / {@link CollUtil} / {@link MapUtil} 实现（委托点见各方法 Javadoc），
+ * 格式化、截断、脱敏、校验等框架特色方法保留原实现。所有方法均为静态工具方法，不依赖 Spring 容器。</p>
  *
  * <p>典型用法：</p>
  * <pre>{@code
@@ -50,31 +53,40 @@ public class StringUtils {
     /**
      * 判断字符串是否为空（null、空字符串、纯空白均返回 true）
      *
+     * <p>实现：委托 {@link StrUtil#isBlank(CharSequence)}。hutool6 将 NBSP（U+00A0）、BOM（U+FEFF）等
+     * 特殊字符同样判为 blank，相较旧实现（{@code String.isBlank}）为期望的超集对齐；
+     * 零宽空格 U+200B 与常用空白判定与旧实现一致。空白判定与框架内既有的
+     * {@code StrUtil.isBlank/isNotBlank} 用法保持一致。</p>
+     *
      * @param str 待检测字符串
      * @return true 表示为空
      */
     public static boolean isBlank(String str) {
-        return str == null || str.isBlank();
+        return StrUtil.isBlank(str);
     }
 
     /**
      * 判断字符串是否不为空
      *
+     * <p>实现：委托 {@link StrUtil#isNotBlank(CharSequence)}，空白定义同 {@link #isBlank(String)}。</p>
+     *
      * @param str 待检测字符串
      * @return true 表示不为空
      */
     public static boolean isNotBlank(String str) {
-        return !isBlank(str);
+        return StrUtil.isNotBlank(str);
     }
 
     /**
      * 判断集合是否为空（null 或 size == 0）
      *
+     * <p>实现：委托 {@link CollUtil#isEmpty(Collection)}。</p>
+     *
      * @param collection 集合
      * @return true 表示为空
      */
     public static boolean isEmpty(Collection<?> collection) {
-        return collection == null || collection.isEmpty();
+        return CollUtil.isEmpty(collection);
     }
 
     /**
@@ -90,11 +102,13 @@ public class StringUtils {
     /**
      * 判断 Map 是否为空（null 或 size == 0）
      *
+     * <p>实现：委托 {@link MapUtil#isEmpty(Map)}。</p>
+     *
      * @param map Map
      * @return true 表示为空
      */
     public static boolean isEmpty(Map<?, ?> map) {
-        return map == null || map.isEmpty();
+        return MapUtil.isEmpty(map);
     }
 
     // ==================== 默认值 ====================
@@ -102,22 +116,27 @@ public class StringUtils {
     /**
      * 若字符串为空则返回默认值
      *
+     * <p>实现：委托 {@link StrUtil#defaultIfBlank(CharSequence, CharSequence)}（入参/返回按 String 收窄），
+     * 空白定义同 {@link #isBlank(String)}。</p>
+     *
      * @param str          原字符串
      * @param defaultValue 默认值
      * @return 原字符串不为空时返回原字符串，否则返回默认值
      */
     public static String defaultIfBlank(String str, String defaultValue) {
-        return isBlank(str) ? defaultValue : str;
+        return StrUtil.defaultIfBlank(str, defaultValue);
     }
 
     /**
      * null 转换为空字符串
      *
+     * <p>实现：委托 {@link StrUtil#emptyIfNull(CharSequence)}。</p>
+     *
      * @param str 原字符串
      * @return 不为 null 时返回原值，否则返回 ""
      */
     public static String nullToEmpty(String str) {
-        return str == null ? SystemConstants.EMPTY : str;
+        return StrUtil.emptyIfNull(str);
     }
 
     // ==================== 格式化 ====================
@@ -129,6 +148,9 @@ public class StringUtils {
      * StringUtils.format("Hello, {}!", "World");   // "Hello, World!"
      * StringUtils.format("{} + {} = {}", 1, 2, 3); // "1 + 2 = 3"
      * }</pre>
+     *
+     * <p>保留原实现：行为对比发现 hutool6 {@code StrUtil.format} 对反斜杠转义
+     * （{@code \{} 输出字面量）与 null 模板的语义不同，委托会导致既有输出漂移，故不委托。</p>
      *
      * @param template 模板字符串，使用 {} 作为占位符
      * @param args     替换参数
@@ -159,6 +181,10 @@ public class StringUtils {
      * 驼峰命名转下划线命名
      * <p>示例：{@code camelToUnderscore("userId")} → {@code "user_id"}</p>
      *
+     * <p>保留原实现：行为对比发现 hutool6 {@code StrUtil.toUnderlineCase} 对连续大写缩写
+     * （如 {@code "UserID"/"URLValue"/"getURL"}）会保留缩写大小写并输出大写片段，
+     * 与本方法「全小写 + 每个大写字母前插下划线」的既有契约不一致，委托会导致既有输出漂移，故不委托。</p>
+     *
      * @param camel 驼峰字符串
      * @return 下划线字符串（全小写）
      */
@@ -180,14 +206,14 @@ public class StringUtils {
     /**
      * 首字母大写
      *
+     * <p>实现：委托 {@link StrUtil#upperFirst(CharSequence)}（入参/返回按 String 收窄），
+     * 行为对比覆盖 null/空串/空白/首字符非字母等边界与 hutool6 等价。</p>
+     *
      * @param str 原字符串
      * @return 首字母大写的字符串，str 为空时返回原值
      */
     public static String capitalize(String str) {
-        if (isBlank(str)) {
-            return str;
-        }
-        return Character.toUpperCase(str.charAt(0)) + str.substring(1);
+        return StrUtil.upperFirst(str);
     }
 
     // ==================== 脱敏 ====================
@@ -277,6 +303,10 @@ public class StringUtils {
      * StringUtils.truncate("Hello World", 8);  // "Hello Wo..."
      * StringUtils.truncate("Hi", 8);           // "Hi"
      * }</pre>
+     *
+     * <p>保留原实现：hutool6 无同契约方法（{@code StrUtil.maxLength} 已不存在），相近的
+     * {@code StrUtil.limitLength} 要求 maxLength &gt; 0 且不处理 maxLength = 0 场景，
+     * 与本方法「最大长度不含省略号、超出补 …」的契约不一致，故不委托。</p>
      *
      * @param str       原字符串
      * @param maxLength 最大长度（不含省略号）

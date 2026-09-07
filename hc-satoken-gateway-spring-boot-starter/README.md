@@ -40,7 +40,7 @@ Gateway（本模块）                    微服务层
 
 ```xml
 <dependency>
-    <groupId>com.hnhegui.framework</groupId>
+    <groupId>com.hc.framework</groupId>
     <artifactId>hc-satoken-gateway-spring-boot-starter</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>
